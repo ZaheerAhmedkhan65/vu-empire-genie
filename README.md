@@ -1,4 +1,15 @@
-# <img src="icon32.png" alt="VU Empire Genie"> VU Empire Genie
+<h1 align="center">
+  <table align="center">
+    <tr>
+      <td>
+        <img src="icon.png" alt="VU Empire Genie" width="64"/>
+      </td>
+      <td style="vertical-align: middle; padding-left: 10px;">
+        VU Empire Genie
+      </td>
+    </tr>
+  </table>
+</h1>
 
 A browser extension that augments the Virtual University (VU) learning experience by providing AI-powered assistance for discussion boards (GDB), quizzes, and lecture interactions. The extension integrates with Google's Generative Language (Gemini) API to generate helpful responses and automate common LMS tasks.
 
