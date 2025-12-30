@@ -1,21 +1,42 @@
 {
   "manifest_version": 3,
-  "name": "AI Summary for Articles",
+  "name": "VU Empire Genie",
   "version": "1.0",
-  "permissions": ["scripting", "activeTab", "storage"],
+  "permissions": [
+    "scripting",
+    "activeTab",
+    "storage"
+  ],
   "action": {
     "default_popup": "popup.html",
-    "default_icon": "icon.png"
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"]
+      "matches": [
+        "https://vulms.vu.edu.pk/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_end"
     }
   ],
   "background": {
     "service_worker": "background.js"
   },
   "options_page": "options.html",
-  "host_permissions": ["<all_urls>"]
+  "host_permissions": [
+    "https://vulms.vu.edu.pk/*",
+    "https://generativelanguage.googleapis.com/*"
+  ]
 }

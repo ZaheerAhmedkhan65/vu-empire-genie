@@ -1,3 +1,4 @@
+// options.js
 document.addEventListener("DOMContentLoaded", () => {
   // Load saved API key if it exists
   chrome.storage.sync.get(["geminiApiKey"], (result) => {

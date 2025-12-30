@@ -1,119 +1,567 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>AI Summary</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        min-width: 500px;
-        min-height: 300px;
-        padding: 15px;
+
+<head>
+  <meta charset="UTF-8">
+  <title>VU Empire Genie - AI Study Assistant</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-width: 400px;
+      min-height: 300px;
+      padding: 15px;
+      background: linear-gradient(135deg, #1a1f3d 0%, #2d1b69 100%);
+    }
+
+    .container {
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 15px 50px rgba(0, 0, 0, 0.2);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .container::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #8B5CF6, #3B82F6, #00D2FF);
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+      margin-bottom: 10px;
+    }
+
+    .logo-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+      border: 2px solid #8B5CF6;
+    }
+
+    .logo-text {
+      text-align: left;
+    }
+
+    h1 {
+      color: #333;
+      font-size: 20px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #8B5CF6 0%, #3B82F6 50%, #00D2FF 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin: 0;
+    }
+
+    .tagline {
+      color: #666;
+      font-size: 12px;
+      font-weight: 500;
+      margin-top: 2px;
+      letter-spacing: 0.5px;
+    }
+
+    .type-selector {
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    .type-selector label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #555;
+      font-size: 13px;
+    }
+
+    #select-type {
+      width: 100%;
+      padding: 12px 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 14px;
+      background: white;
+      transition: all 0.3s;
+      font-weight: 500;
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238B5CF6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 15px center;
+      background-size: 16px;
+      padding-right: 45px;
+    }
+
+    #select-type:focus {
+      border-color: #8B5CF6;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+    }
+
+    .buttons {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    button {
+      flex: 1;
+      padding: 12px 15px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    button::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 5px;
+      height: 5px;
+      background: rgba(255, 255, 255, 0.5);
+      opacity: 0;
+      border-radius: 100%;
+      transform: scale(1, 1) translate(-50%);
+      transform-origin: 50% 50%;
+    }
+
+    button:focus:not(:active)::after {
+      animation: ripple 1s ease-out;
+    }
+
+    @keyframes ripple {
+      0% {
+        transform: scale(0, 0);
+        opacity: 0.5;
       }
 
-      h2 {
-        color: #333;
-        margin-bottom: 15px;
+      100% {
+        transform: scale(40, 40);
+        opacity: 0;
+      }
+    }
+
+    #submit {
+      background: linear-gradient(135deg, #8B5CF6 0%, #3B82F6 100%);
+      color: white;
+    }
+
+    #submit:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(139, 92, 246, 0.4);
+    }
+
+    #submit:active {
+      transform: translateY(0);
+    }
+
+    #change-type {
+      background: #f8f9fa;
+      color: #555;
+      border: 2px solid #e9ecef;
+    }
+
+    #change-type:hover {
+      background: #e9ecef;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    #result {
+      margin-top: 20px;
+      padding: 20px;
+      border: 2px solid #e9ecef;
+      border-radius: 12px;
+      min-height: 200px;
+      max-height: 400px;
+      overflow-y: auto;
+      background: #f8f9fa;
+      font-size: 14px;
+      line-height: 1.6;
+      transition: all 0.3s;
+    }
+
+    #result:hover {
+      border-color: #d0d7e7;
+    }
+
+    /* Loading animation */
+    .loading {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 150px;
+      color: #8B5CF6;
+    }
+
+    .loader {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #8B5CF6;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 15px;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
       }
 
-      .options {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 15px;
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* GDB Solution Styles */
+    .gdb-solution .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #8B5CF6;
+    }
+
+    .gdb-solution h3 {
+      color: #333;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .action-btn {
+      padding: 8px 15px;
+      border-radius: 8px;
+      border: none;
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .copy-btn {
+      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      color: white;
+    }
+
+    .copy-btn:hover {
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+
+    .fill-btn {
+      background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+      color: white;
+    }
+
+    .fill-btn:hover {
+      background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+
+    .solution-content {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid #e0e0e0;
+      margin-bottom: 15px;
+      white-space: pre-wrap;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      max-height: 250px;
+      overflow-y: auto;
+    }
+
+    .instructions {
+      background: #f0f9ff;
+      padding: 12px;
+      border-radius: 8px;
+      border-left: 4px solid #3B82F6;
+      font-size: 12px;
+      color: #1E40AF;
+    }
+
+    /* Quiz Result Styles */
+    .quiz-result {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid #e0e0e0;
+    }
+
+    .course-info {
+      background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+      padding: 10px 12px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      font-size: 13px;
+      border-left: 4px solid #0EA5E9;
+    }
+
+    .question-text {
+      padding: 15px;
+      background: #f8fafc;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .options ul {
+      list-style: none;
+      padding: 0;
+      margin: 10px 0;
+    }
+
+    .options li {
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 8px;
+      border: 2px solid #e2e8f0;
+      background: white;
+      display: flex;
+      align-items: center;
+      transition: all 0.3s;
+    }
+
+    .options li:hover {
+      border-color: #cbd5e1;
+    }
+
+    .options li.correct {
+      background: linear-gradient(135deg, #DCFCE7 0%, #BBF7D0 100%);
+      border-color: #22C55E;
+      color: #166534;
+    }
+
+    .option-letter {
+      font-weight: 800;
+      margin-right: 12px;
+      min-width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f1f5f9;
+      border-radius: 6px;
+      font-size: 12px;
+    }
+
+    .options li.correct .option-letter {
+      background: #22C55E;
+      color: white;
+    }
+
+    .correct-answer {
+      background: linear-gradient(135deg, #DCFCE7 0%, #BBF7D0 100%);
+      padding: 12px;
+      border-radius: 8px;
+      margin: 15px 0;
+      border: 2px solid #22C55E;
+    }
+
+    .explanation {
+      background: #f8fafc;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .quiz-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .quiz-actions button {
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.3s;
+      flex: 1;
+    }
+
+    #copy-quiz {
+      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      color: white;
+    }
+
+    #highlight-quiz {
+      background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+      color: white;
+    }
+
+    #select-answer {
+      background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+      color: white;
+    }
+
+    .quiz-actions button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+    }
+
+    .success {
+      text-align: center;
+      padding: 30px 20px;
+    }
+
+    .success-icon {
+      font-size: 40px;
+      margin-bottom: 15px;
+    }
+
+    .success h3 {
+      color: #059669;
+      margin-bottom: 10px;
+      font-size: 18px;
+    }
+
+    /* Scrollbar styling */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #a1a1a1;
+    }
+
+    /* Status indicator */
+    .status-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+
+    .status-ready {
+      background: #10B981;
+    }
+
+    .status-processing {
+      background: #F59E0B;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        opacity: 1;
       }
 
-      button {
-        padding: 8px 15px;
-        background-color: #4285f4;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-weight: bold;
+      50% {
+        opacity: 0.5;
       }
 
-      button:hover {
-        background-color: #3367d6;
+      100% {
+        opacity: 1;
       }
+    }
 
-      #copy-btn {
-        background-color: #34a853;
-      }
+    /* Footer */
+    .footer {
+      margin-top: 15px;
+      text-align: center;
+      font-size: 11px;
+      color: #94a3b8;
+      padding-top: 10px;
+      border-top: 1px solid #e2e8f0;
+    }
+  </style>
+</head>
 
-      #copy-btn:hover {
-        background-color: #2e8b57;
-      }
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo-container">
+        <img src="icon128.png" class="logo-icon" alt="VU Empire Genie">
+        <div class="logo-text">
+          <h1>VU Empire Genie</h1>
+          <div class="tagline">AI-Powered Study Assistant</div>
+        </div>
+      </div>
+    </div>
 
-      #summary-type {
-        padding: 8px;
-        border-radius: 4px;
-        border: 1px solid #ddd;
-      }
-
-      #result {
-        margin-top: 15px;
-        padding: 15px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        min-height: 150px;
-        max-height: 400px;
-        overflow-y: auto;
-        white-space: pre-wrap;
-        line-height: 1.5;
-      }
-
-      #result ul {
-        padding-left: 20px;
-      }
-
-      #result li {
-        margin-bottom: 10px;
-      }
-
-      .loading {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 150px;
-      }
-
-      .loader {
-        border: 4px solid #f3f3f3;
-        border-top: 4px solid #3498db;
-        border-radius: 50%;
-        width: 30px;
-        height: 30px;
-        animation: spin 1s linear infinite;
-      }
-
-      @keyframes spin {
-        0% {
-          transform: rotate(0deg);
-        }
-        100% {
-          transform: rotate(360deg);
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <h2>AI Summary</h2>
-
-    <div class="options">
-      <select id="summary-type">
-        <option value="brief">Brief Summary</option>
-        <option value="detailed">Detailed Summary</option>
-        <option value="bullets">Bullet Points</option>
+    <div class="type-selector">
+      <label for="select-type">
+        <span class="status-indicator status-ready"></span>
+        Select Mode:
+      </label>
+      <select id="select-type">
+        <option value="">-- Select Action --</option>
+        <option value="gdb">🧠 GDB Solver</option>
+        <option value="quiz">📝 Quiz Solver</option>
+        <option value="lecture-view">✅ Mark Lecture as Viewed</option>
       </select>
-      <button id="summarize">Summarize This Page</button>
-      <button id="copy-btn">Copy Summary</button>
+    </div>
+
+    <div class="buttons">
+      <button id="submit">
+        <span>✨ Submit</span>
+      </button>
+      <button id="change-type">
+        <span>🔄 Change Type</span>
+      </button>
     </div>
 
     <div id="result">
-      Select a summary type and click 'Summarize This Page' to generate a
-      summary.
+      <div style="text-align: center; padding: 30px;">
+        <div style="font-size: 48px; margin-bottom: 15px;">🧞‍♂️</div>
+        <h3 style="color: #8B5CF6; margin-bottom: 10px;">Your Wish is My Command!</h3>
+        <p style="color: #666; font-size: 13px;">Select an action above and let the magic begin!</p>
+      </div>
     </div>
 
-    <script src="config.js"></script>
-    <script src="popup.js"></script>
-  </body>
+    <div class="footer">
+      Powered by VU Empire
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+
 </html>
