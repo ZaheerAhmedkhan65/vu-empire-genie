@@ -1,3 +1,4 @@
+// popup.js
 document.addEventListener("DOMContentLoaded", function () {
   const resultDiv = document.getElementById("result");
   const submitBtn = document.getElementById("submit");

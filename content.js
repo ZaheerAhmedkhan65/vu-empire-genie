@@ -1,4 +1,4 @@
-// Listen for messages from popup
+//content.js
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   switch (request.type) {
     case "GET_GDB_CONTENT":
