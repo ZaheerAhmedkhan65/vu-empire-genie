@@ -2,7 +2,7 @@
   <table align="center">
     <tr>
       <td>
-        <img src="icon.png" alt="VU Empire Genie" width="64"/>
+        <img src="assets/icons/icon.png" alt="VU Empire Genie" width="64"/>
       </td>
       <td style="vertical-align: middle; padding-left: 10px;">
         VU Empire Genie
