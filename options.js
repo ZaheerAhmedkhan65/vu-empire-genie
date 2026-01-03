@@ -1,32 +1,37 @@
 // options.js
-document.addEventListener("DOMContentLoaded", () => {
-  // Load saved API key if it exists
-  chrome.storage.sync.get(["geminiApiKey"], (result) => {
-    if (result.geminiApiKey) {
-      document.getElementById("api-key").value = result.geminiApiKey;
+document.addEventListener('DOMContentLoaded', () => {
+  const apiKeyInput = document.getElementById('api-key');
+  const saveButton = document.getElementById('save-button');
+  const statusMessage = document.getElementById('status-message');
+
+  // Load saved settings
+  chrome.storage.sync.get(['apiKey'], (result) => {
+    if (result.apiKey) {
+      apiKeyInput.value = result.apiKey;
     }
   });
 
-  // Save API key when button is clicked
-  document.getElementById("save-button").addEventListener("click", () => {
-    const apiKey = document.getElementById("api-key").value.trim();
+  saveButton.addEventListener('click', () => {
+    const apiKey = apiKeyInput.value.trim();
 
-    if (apiKey) {
-      chrome.storage.sync.set({ geminiApiKey: apiKey }, () => {
-        const successMessage = document.getElementById("success-message");
-        successMessage.style.display = "block";
-
-        // Close the tab after a short delay to show the success message
-        setTimeout(() => {
-          window.close();
-          // For cases where window.close() doesn't work (like when opened programmatically)
-          chrome.tabs.getCurrent((tab) => {
-            if (tab) {
-              chrome.tabs.remove(tab.id);
-            }
-          });
-        }, 1000);
-      });
+    if (!apiKey) {
+      showStatus('Please enter an API key', 'error');
+      return;
     }
+
+    chrome.storage.sync.set({ apiKey }, () => {
+      showStatus('Settings saved successfully!', 'success');
+
+      // Close options page after delay
+      setTimeout(() => {
+        window.close();
+      }, 1500);
+    });
   });
+
+  function showStatus(message, type) {
+    statusMessage.textContent = message;
+    statusMessage.classList.add(`${type}`);
+    statusMessage.style.display = 'block';
+  }
 });

@@ -2,10 +2,12 @@
   "manifest_version": 3,
   "name": "VU Empire Genie",
   "version": "1.0.0",
+  "description": "AI-powered assistant for VU LMS with lecture automation, GDB solving, and quiz assistance",
   "permissions": [
-    "scripting",
     "activeTab",
-    "storage"
+    "storage",
+    "scripting",
+    "downloads"
   ],
   "action": {
     "default_popup": "popup.html",
@@ -30,13 +32,19 @@
       "js": [
         "content.js"
       ],
-      "run_at": "document_end"
+      "run_at": "document_end",
+      "world": "ISOLATED",
+      "all_frames": true
     }
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
-  "options_page": "options.html",
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
   "host_permissions": [
     "https://vulms.vu.edu.pk/*",
     "https://generativelanguage.googleapis.com/*"
