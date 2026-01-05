@@ -283,10 +283,13 @@ class QuizController {
                 FROM questions`
             );
 
+            const students = await Student.findAll();
+
             res.status(200).json({
                 success: true,
                 summary: totalCounts[0],
-                byCourse: stats
+                byCourse: stats,
+                students
             });
 
         } catch (error) {

@@ -1,0 +1,51 @@
+<footer class="footer">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-6">
+                <h5>Quiz Question Bank</h5>
+                <p class="text-light">
+                    A centralized repository for collecting and managing quiz questions
+                    with answers and explanations.
+                </p>
+            </div>
+            <div class="col-md-3">
+                <h5>Links</h5>
+                <ul class="list-unstyled">
+                    <li><a href="/" class="text-light text-decoration-none">Dashboard</a></li>
+                    <li><a href="/api/quiz/bank" class="text-light text-decoration-none">Question Bank API</a></li>
+                    <li><a href="/health" class="text-light text-decoration-none">Health Check</a></li>
+                </ul>
+            </div>
+            <div class="col-md-3">
+                <h5>System</h5>
+                <ul class="list-unstyled">
+                    <li class="text-light">
+                        <i class="bi bi-database me-2"></i>
+                        Questions: <%= overallStats.total_questions || 0 %>
+                    </li>
+                    <li class="text-light">
+                        <i class="bi bi-book me-2"></i>
+                        Courses: <%= overallStats.total_courses || 0 %>
+                    </li>
+                    <li class="text-light">
+                        <i class="bi bi-clock me-2"></i>
+                        Uptime: 100%
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <hr class="bg-light">
+        <div class="row">
+            <div class="col-md-6">
+                <p class="mb-0">
+                    &copy; <%= currentYear %> Quiz Question Bank. All rights reserved.
+                </p>
+            </div>
+            <div class="col-md-6 text-md-end">
+                <p class="mb-0">
+                    Built with <i class="bi bi-heart-fill text-danger"></i> using Node.js, Express & MySQL
+                </p>
+            </div>
+        </div>
+    </div>
+</footer>
