@@ -19,20 +19,28 @@ class Question {
         return rows;
     }
 
+    static async findByQuestionText(courseId, questionText) {
+        const [rows] = await db.query(
+            'SELECT * FROM questions WHERE course_id = ? AND question_text = ?',
+            [courseId, questionText]
+        );
+        return rows[0];
+    }
+
     static async create(questionData) {
-        const { course_id, question_text, url, timestamp } = questionData;
+        const { course_id, question_text, explanation, url, timestamp } = questionData;
         const [result] = await db.query(
-            'INSERT INTO questions (course_id, question_text, url, timestamp) VALUES (?, ?, ?, ?)',
-            [course_id, question_text, url, timestamp]
+            'INSERT INTO questions (course_id, question_text, explanation, url, timestamp) VALUES (?, ?, ?, ?, ?)',
+            [course_id, question_text, explanation, url, timestamp]
         );
         return { question_id: result.insertId, ...questionData };
     }
 
     static async update(id, questionData) {
-        const { course_id, question_text, url, timestamp } = questionData;
+        const { course_id, question_text, explanation, url, timestamp } = questionData;
         const [result] = await db.query(
-            'UPDATE questions SET course_id = ?, question_text = ?, url = ?, timestamp = ? WHERE question_id = ?',
-            [course_id, question_text, url, timestamp, id]
+            'UPDATE questions SET course_id = ?, question_text = ?, explanation = ?, url = ?, timestamp = ? WHERE question_id = ?',
+            [course_id, question_text, explanation, url, timestamp, id]
         );
         return result.affectedRows > 0;
     }
@@ -67,21 +75,33 @@ class Question {
         return rows[0];
     }
 
-    static async getQuestionStats(questionId) {
+    static async getCourseQuestions(courseCode) {
         const [rows] = await db.query(
             `SELECT 
-                q.question_id,
-                q.question_text,
-                COUNT(sa.answer_id) as total_attempts,
-                SUM(CASE WHEN sa.is_correct THEN 1 ELSE 0 END) as correct_attempts,
-                ROUND((SUM(CASE WHEN sa.is_correct THEN 1 ELSE 0 END) / COUNT(*)) * 100, 2) as correct_percentage
+                q.*,
+                c.course_code,
+                c.course_name,
+                JSON_ARRAYAGG(
+                    JSON_OBJECT(
+                        'letter', o.letter,
+                        'option_text', o.option_text,
+                        'is_correct', o.is_correct
+                    )
+                ) as options
             FROM questions q
-            LEFT JOIN student_answers sa ON q.question_id = sa.question_id
-            WHERE q.question_id = ?
-            GROUP BY q.question_id`,
-            [questionId]
+            JOIN courses c ON q.course_id = c.course_id
+            LEFT JOIN options o ON q.question_id = o.question_id
+            WHERE c.course_code = ?
+            GROUP BY q.question_id
+            ORDER BY q.timestamp DESC`,
+            [courseCode]
         );
-        return rows[0];
+        return rows;
+    }
+
+    static async getQuestionBank() {
+        const [rows] = await db.query('SELECT * FROM question_bank_view ORDER BY course_code, question_added DESC');
+        return rows;
     }
 }
 

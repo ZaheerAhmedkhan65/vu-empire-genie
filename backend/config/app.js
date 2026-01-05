@@ -1,3 +1,4 @@
+//config/app.js
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
@@ -16,6 +17,17 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // Routes
 app.get('/', (req, res) => {
     res.send('Hello World!');
+});
+
+app.use((err, req, res, next) => {
+    if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+        return res.status(400).json({
+            success: false,
+            message: 'Invalid JSON format',
+            error: err.message
+        });
+    }
+    next(err);
 });
 
 app.use('/api', quizRoutes);
