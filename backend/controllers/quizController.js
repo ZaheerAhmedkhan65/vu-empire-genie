@@ -1,22 +1,20 @@
 const Course = require('../models/Course');
-const Student = require('../models/Student');
 const Question = require('../models/Question');
 const Option = require('../models/Option');
-const StudentAnswer = require('../models/StudentAnswer');
+const Student = require('../models/Student');
 const db = require('../config/db');
 
 class QuizController {
     /**
-     * Create multiple quiz records in a single API call
+     * Create multiple quiz questions (without student answers)
      * Expected payload format:
      * {
      *   "quizData": [
      *     {
      *       "courseCode": "CS610",
      *       "courseName": "CS610P - Computer Networks (Practical) (Graded Quiz No.3)",
-     *       "studentId": "BC240201242",
-     *       "studentName": "ZAHEER AHMED KHAN",
      *       "question": "In Wireshark, ________ shows profile name.",
+     *       "explanation": "Status bar in Wireshark displays the profile name...",
      *       "url": "https://vulms.vu.edu.pk/Quiz/QuizQuestion.aspx?ver=d079d2ee-9f5e-4cef-bb31-7530525fd022",
      *       "timestamp": "2026-01-05T12:01:13.484Z",
      *       "options": [
@@ -24,8 +22,7 @@ class QuizController {
      *         {"letter": "B", "text": "Status Bar", "index": 1, "isCorrect": true},
      *         {"letter": "C", "text": "Title Bar", "index": 2, "isCorrect": false},
      *         {"letter": "D", "text": "Tool Bar", "index": 3, "isCorrect": false}
-     *       ],
-     *       "selectedOption": "B"
+     *       ]
      *     }
      *   ]
      * }
@@ -54,7 +51,11 @@ class QuizController {
                 if (!record.options || !Array.isArray(record.options) || record.options.length === 0) {
                     errors.push('options must be a non-empty array');
                 }
-                if (!record.selectedOption) errors.push('selectedOption is required');
+                // Validate at least one correct option
+                const hasCorrectOption = record.options.some(opt => opt.isCorrect);
+                if (!hasCorrectOption) {
+                    errors.push('At least one option must be marked as correct');
+                }
 
                 if (errors.length > 0) {
                     validationErrors.push({
@@ -102,23 +103,20 @@ class QuizController {
                         });
                     }
 
-                    // 3. Check if question already exists for this course
-                    let question = await Question.findByCourse(course.course_id);
-                    question = question.find(q =>
-                        q.question_text === record.question &&
-                        q.url === record.url
-                    );
+                    // 2. Check if question already exists for this course
+                    let question = await Question.findByQuestionText(course.course_id, record.question);
 
                     if (!question) {
-                        // 4. Create question
+                        // 3. Create question with explanation
                         question = await Question.create({
                             course_id: course.course_id,
                             question_text: record.question,
+                            explanation: record.solution?.explanation || record.explanation || '',
                             url: record.url,
                             timestamp: new Date(record.timestamp)
                         });
 
-                        // 5. Create options
+                        // 4. Create options
                         const optionsData = record.options.map(opt => ({
                             question_id: question.question_id,
                             letter: opt.letter,
@@ -128,66 +126,22 @@ class QuizController {
                         }));
 
                         await Option.createMultiple(optionsData);
-                    }
-
-                    // 6. Check if student has already answered this question
-                    let studentAnswer = await StudentAnswer.findByStudentAndQuestion(
-                        record.studentId,
-                        question.question_id
-                    );
-
-                    // Determine if the selected option is correct
-                    const correctOption = await Option.findCorrectOption(question.question_id);
-                    const isCorrect = correctOption && correctOption.letter === record.selectedOption;
-
-                    if (!studentAnswer) {
-                        // 7. Create student answer
-                        studentAnswer = await StudentAnswer.create({
-                            question_id: question.question_id,
-                            student_id: record.studentId,
-                            selected_option_letter: record.selectedOption,
-                            is_correct: isCorrect,
-                            answered_at: new Date(record.timestamp)
-                        });
 
                         results.successful++;
                         results.details.push({
                             recordIndex: i,
                             status: 'created',
                             questionId: question.question_id,
-                            answerId: studentAnswer.answer_id,
-                            isCorrect: isCorrect,
-                            message: 'Record created successfully'
+                            message: 'Question added to question bank'
                         });
                     } else {
-                        // Update existing answer if needed
-                        if (studentAnswer.selected_option_letter !== record.selectedOption) {
-                            await StudentAnswer.update(studentAnswer.answer_id, {
-                                selected_option_letter: record.selectedOption,
-                                is_correct: isCorrect,
-                                answered_at: new Date(record.timestamp)
-                            });
-
-                            results.successful++;
-                            results.details.push({
-                                recordIndex: i,
-                                status: 'updated',
-                                questionId: question.question_id,
-                                answerId: studentAnswer.answer_id,
-                                isCorrect: isCorrect,
-                                message: 'Existing record updated'
-                            });
-                        } else {
-                            results.successful++;
-                            results.details.push({
-                                recordIndex: i,
-                                status: 'skipped',
-                                questionId: question.question_id,
-                                answerId: studentAnswer.answer_id,
-                                isCorrect: isCorrect,
-                                message: 'Record already exists, no changes needed'
-                            });
-                        }
+                        results.successful++;
+                        results.details.push({
+                            recordIndex: i,
+                            status: 'skipped',
+                            questionId: question.question_id,
+                            message: 'Question already exists in question bank'
+                        });
                     }
 
                 } catch (error) {
@@ -204,7 +158,7 @@ class QuizController {
 
             res.status(200).json({
                 success: true,
-                message: `Processed ${results.totalRecords} records`,
+                message: `Processed ${results.totalRecords} quiz questions`,
                 summary: {
                     total: results.totalRecords,
                     successful: results.successful,
@@ -224,77 +178,37 @@ class QuizController {
     }
 
     /**
-     * Get quiz data by student ID
+     * Get all questions for a course
      */
-    static async getQuizDataByStudent(req, res) {
+    static async getCourseQuestions(req, res) {
         try {
-            const { studentId } = req.params;
+            const { courseCode } = req.params;
 
-            if (!studentId) {
+            if (!courseCode) {
                 return res.status(400).json({
                     success: false,
-                    message: 'Student ID is required'
+                    message: 'Course code is required'
                 });
             }
 
-            const quizResults = await StudentAnswer.getStudentAnswersWithDetails(studentId);
+            const questions = await Question.getCourseQuestions(courseCode);
 
-            if (quizResults.length === 0) {
+            if (questions.length === 0) {
                 return res.status(404).json({
                     success: false,
-                    message: 'No quiz data found for this student'
+                    message: 'No questions found for this course'
                 });
             }
 
-            // Group by course
-            const groupedData = quizResults.reduce((acc, result) => {
-                const courseKey = result.course_code;
-                if (!acc[courseKey]) {
-                    acc[courseKey] = {
-                        courseCode: result.course_code,
-                        courseName: result.course_name,
-                        studentId: result.student_id,
-                        studentName: result.student_name,
-                        totalQuestions: 0,
-                        correctAnswers: 0,
-                        questions: []
-                    };
-                }
-
-                acc[courseKey].totalQuestions++;
-                if (result.is_correct) acc[courseKey].correctAnswers++;
-
-                acc[courseKey].questions.push({
-                    questionId: result.question_id,
-                    questionText: result.question_text,
-                    url: result.url,
-                    selectedOption: result.selected_option_letter,
-                    correctOption: result.correct_answer_letter,
-                    isCorrect: result.is_correct,
-                    answeredAt: result.answered_at
-                });
-
-                return acc;
-            }, {});
-
-            // Calculate percentages
-            Object.keys(groupedData).forEach(courseKey => {
-                const courseData = groupedData[courseKey];
-                courseData.scorePercentage = courseData.totalQuestions > 0
-                    ? Math.round((courseData.correctAnswers / courseData.totalQuestions) * 10000) / 100
-                    : 0;
-            });
-
             res.status(200).json({
                 success: true,
-                studentId: studentId,
-                studentName: quizResults[0]?.student_name,
-                totalCourses: Object.keys(groupedData).length,
-                courses: Object.values(groupedData)
+                courseCode: courseCode,
+                count: questions.length,
+                data: questions
             });
 
         } catch (error) {
-            console.error('Error in getQuizDataByStudent:', error);
+            console.error('Error in getCourseQuestions:', error);
             res.status(500).json({
                 success: false,
                 message: 'Internal server error',
@@ -304,69 +218,36 @@ class QuizController {
     }
 
     /**
-     * Get quiz statistics
+     * Get complete question bank
      */
-    static async getQuizStatistics(req, res) {
+    static async getQuestionBank(req, res) {
         try {
-            const { studentId, courseCode } = req.query;
-
-            let statistics = {};
-
-            if (studentId) {
-                // Get student statistics
-                const student = await Student.findById(studentId);
-                if (!student) {
-                    return res.status(404).json({
-                        success: false,
-                        message: 'Student not found'
-                    });
-                }
-
-                const studentStats = await Student.getStudentPerformance(studentId);
-                statistics.student = studentStats;
-            }
+            const { courseCode } = req.query;
+            let questionBank;
 
             if (courseCode) {
-                // Get course statistics
-                const course = await Course.findByCode(courseCode);
-                if (!course) {
-                    return res.status(404).json({
-                        success: false,
-                        message: 'Course not found'
-                    });
-                }
-
-                const courseStats = await Course.getCourseStats(course.course_id);
-                statistics.course = courseStats;
+                // Get questions for specific course
+                questionBank = await Question.getCourseQuestions(courseCode);
+            } else {
+                // Get all questions
+                questionBank = await Question.getQuestionBank();
             }
 
-            if (!studentId && !courseCode) {
-                // Get overall statistics
-                const [courses] = await Course.findAll();
-                const [students] = await Student.findAll();
-
-                const totalQuestions = await db.query(
-                    'SELECT COUNT(*) as count FROM questions'
-                );
-                const totalAnswers = await db.query(
-                    'SELECT COUNT(*) as count FROM student_answers'
-                );
-
-                statistics.overall = {
-                    totalCourses: courses.length,
-                    totalStudents: students.length,
-                    totalQuestions: totalQuestions[0][0].count,
-                    totalAnswers: totalAnswers[0][0].count
-                };
+            if (questionBank.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'No questions found in the question bank'
+                });
             }
 
             res.status(200).json({
                 success: true,
-                data: statistics
+                count: questionBank.length,
+                data: questionBank
             });
 
         } catch (error) {
-            console.error('Error in getQuizStatistics:', error);
+            console.error('Error in getQuestionBank:', error);
             res.status(500).json({
                 success: false,
                 message: 'Internal server error',
@@ -376,43 +257,116 @@ class QuizController {
     }
 
     /**
-     * Bulk upload quiz data from file (optional enhancement)
+     * Get question statistics
      */
-    static async bulkUploadQuizData(req, res) {
+    static async getQuestionStatistics(req, res) {
         try {
-            if (!req.file) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'No file uploaded'
-                });
-            }
-
-            // Parse JSON file
-            let quizData;
-            try {
-                quizData = JSON.parse(req.file.buffer.toString());
-            } catch (parseError) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Invalid JSON file format'
-                });
-            }
-
-            // Reuse the createMultipleQuizRecords logic
-            const controller = new QuizController();
-            const mockRes = {
-                json: (data) => data
-            };
-
-            const result = await controller.createMultipleQuizRecords(
-                { body: { quizData } },
-                mockRes
+            const [stats] = await db.query(
+                `SELECT 
+                    c.course_code,
+                    c.course_name,
+                    COUNT(q.question_id) as total_questions,
+                    COUNT(DISTINCT DATE(q.timestamp)) as days_with_questions,
+                    MIN(q.timestamp) as first_question_date,
+                    MAX(q.timestamp) as latest_question_date
+                FROM courses c
+                LEFT JOIN questions q ON c.course_id = q.course_id
+                GROUP BY c.course_id
+                ORDER BY total_questions DESC`
             );
 
-            res.status(200).json(result);
+            // Get total counts
+            const [totalCounts] = await db.query(
+                `SELECT 
+                    COUNT(*) as total_questions,
+                    COUNT(DISTINCT course_id) as total_courses
+                FROM questions`
+            );
+
+            res.status(200).json({
+                success: true,
+                summary: totalCounts[0],
+                byCourse: stats
+            });
 
         } catch (error) {
-            console.error('Error in bulkUploadQuizData:', error);
+            console.error('Error in getQuestionStatistics:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Internal server error',
+                error: error.message
+            });
+        }
+    }
+
+    /**
+     * Search questions
+     */
+    static async searchQuestions(req, res) {
+        try {
+            const { query, courseCode } = req.query;
+
+            if (!query) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Search query is required'
+                });
+            }
+
+            let sql = `
+                SELECT 
+                    q.question_id,
+                    q.course_id,
+                    q.question_text,
+                    q.explanation,
+                    q.url,
+                    q.timestamp,
+                    c.course_code,
+                    c.course_name,
+                    JSON_ARRAYAGG(
+                        JSON_OBJECT(
+                            'letter', o.letter,
+                            'option_text', o.option_text,
+                            'is_correct', o.is_correct
+                        )
+                    ) AS options
+                FROM questions q
+                JOIN courses c ON q.course_id = c.course_id
+                LEFT JOIN options o ON q.question_id = o.question_id
+                WHERE (q.question_text LIKE ? OR q.explanation LIKE ?)
+            `;
+
+            const params = [`%${query}%`, `%${query}%`];
+
+            if (courseCode) {
+                sql += ' AND c.course_code = ?';
+                params.push(courseCode);
+            }
+
+            sql += `
+                GROUP BY 
+                    q.question_id,
+                    q.course_id,
+                    q.question_text,
+                    q.explanation,
+                    q.url,
+                    q.timestamp,
+                    c.course_code,
+                    c.course_name
+                ORDER BY q.timestamp DESC
+            `;
+
+            const [questions] = await db.query(sql, params);
+
+            res.status(200).json({
+                success: true,
+                query: query,
+                count: questions.length,
+                data: questions
+            });
+
+        } catch (error) {
+            console.error('Error in searchQuestions:', error);
             res.status(500).json({
                 success: false,
                 message: 'Internal server error',
