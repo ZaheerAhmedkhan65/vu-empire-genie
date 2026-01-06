@@ -27,14 +27,6 @@ async function initPageActions() {
 
         if (tab && tab.url && tab.url.includes('vulms.vu.edu.pk')) {
             showPageActions(tab.url, tab.id);
-        } else {
-            // Show default message if not on VU site
-            document.getElementById('page-actions').innerHTML = `
-                <div style="text-align: center; padding: 20px; background: rgba(255,255,255,0.1); border-radius: 12px;">
-                    <div style="font-size: 36px; margin-bottom: 10px;">🌐</div>
-                    <div style="font-size: 14px; opacity: 0.8;">Open VU LMS to see page actions</div>
-                </div>
-            `;
         }
     } catch (error) {
         console.error('Error checking current page:', error);
@@ -46,14 +38,21 @@ async function showPageActions(url, tabId) {
 
     if (url.includes('LessonViewer.aspx')) {
         actionContainer.innerHTML = `
-            <button class="page-action-btn" id="mark-watched">
-                Mark Lecture as Watched
+            <button class="page-action-btn" id="auto-skip-lecture">
+                Auto Skip All Lectures
+            </button>
+            <button class="page-action-btn" id="skip-lecture">
+                Skip This Lecture
             </button>
         `;
 
         // Add event listeners for lecture actions
-        document.getElementById('mark-watched')?.addEventListener('click', () => {
-            executeOnTab(tabId, 'markLectureAsWatched');
+        document.getElementById('skip-lecture')?.addEventListener('click', () => {
+            executeOnTab(tabId, 'skipLecture');
+        });
+
+        document.getElementById('auto-skip-lecture')?.addEventListener('click', () => {
+            executeOnTab(tabId, 'autoSkipLectures');
         });
 
     } else if (url.includes('Quiz/') || url.includes('FormativeAssessment/')) {
@@ -135,7 +134,7 @@ async function initSettings() {
     try {
         // Load saved settings
         const result = await chrome.storage.sync.get([
-            'apiKey', 'autoSelect', 'autoSaveQuiz', 'enableCopyPaste'
+            'apiKey', 'autoSelect', 'autoSaveQuiz', 'enableCopyPaste', 'autoSkipAllLectures'
         ]);
 
         // Set form values
@@ -143,7 +142,8 @@ async function initSettings() {
         document.getElementById('autoSelect').checked = result.autoSelect !== false;
         document.getElementById('autoSaveQuiz').checked = result.autoSaveQuiz !== false;
         document.getElementById('enableCopyPaste').checked = result.enableCopyPaste !== false;
-
+        document.getElementById('autoSkipAllLectures').checked = result.autoSkipAllLectures !== false;
+        
         // Save settings button
         document.getElementById('saveBtn').addEventListener('click', saveSettings);
 
@@ -159,6 +159,7 @@ async function saveSettings() {
         const autoSelect = document.getElementById('autoSelect').checked;
         const autoSaveQuiz = document.getElementById('autoSaveQuiz').checked;
         const enableCopyPaste = document.getElementById('enableCopyPaste').checked;
+        const autoSkipAllLectures = document.getElementById('autoSkipAllLectures').checked;
 
         // Validate API key format (optional)
         if (apiKey && !apiKey.startsWith('AIza')) {
@@ -172,7 +173,8 @@ async function saveSettings() {
             apiKey,
             autoSelect,
             autoSaveQuiz,
-            enableCopyPaste
+            enableCopyPaste,
+            autoSkipAllLectures
         });
 
         // Also store in localStorage for fallback on current VU page
@@ -182,6 +184,7 @@ async function saveSettings() {
                 await chrome.scripting.executeScript({
                     target: { tabId: tab.id },
                     func: (key, settings) => {
+                        console.log('Saving settings to localStorage...', settings);
                         localStorage.setItem('vuGenie_apiKey', key);
                         localStorage.setItem('vuGenie_settings', JSON.stringify(settings));
                         console.log('Settings saved to localStorage');
@@ -194,7 +197,7 @@ async function saveSettings() {
                             console.log('Updated active genie instance with new settings');
                         }
                     },
-                    args: [apiKey, { autoSelect, autoSaveQuiz, enableCopyPaste }],
+                    args: [apiKey, { autoSelect, autoSaveQuiz, enableCopyPaste, autoSkipAllLectures }],
                     world: 'MAIN'
                 });
             }
