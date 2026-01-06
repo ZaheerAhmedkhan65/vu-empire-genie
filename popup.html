@@ -1,3 +1,4 @@
+<!-- popup.html -->
 <!DOCTYPE html>
 <html>
 
@@ -5,7 +6,6 @@
   <meta charset="UTF-8">
   <title>VU Empire Genie</title>
   <link rel="stylesheet" href="assets/css/popup.css">
-  <link rel="stylesheet" href="assets/css/style.css">
 </head>
 
 <body>
@@ -20,42 +20,62 @@
       </div>
     </div>
 
-    <div class="type-selector">
-      <label for="select-type">
-        <span class="status-indicator status-ready"></span>
-        Select Mode:
-      </label>
-      <select id="select-type">
-        <option value="">-- Select Action --</option>
-        <option value="gdb">🧠 GDB Solver</option>
-        <option value="quiz">📝 Quiz Solver</option>
-        <option value="lecture-view">✅ Mark Lecture as Viewed</option>
-      </select>
+    <!-- Page-Specific Actions -->
+    <div id="page-actions">
+      <!-- Dynamic content based on current page -->
     </div>
 
-    <div class="buttons">
-      <button id="submit">
-        <span>✨ Submit</span>
-      </button>
-      <button id="change-type">
-        <span>🔄 Change Type</span>
-      </button>
-    </div>
+    <!-- Settings Section -->
+    <div class="settings-section">
+      <div class="settings-title">Configuration</div>
 
-    <div id="result">
-      <div style="text-align: center; padding: 30px;">
-        <div style="font-size: 48px; margin-bottom: 15px;">🧞‍♂️</div>
-        <h3 style="color: #8B5CF6; margin-bottom: 10px;">Your Wish is My Command!</h3>
-        <p style="color: #666; font-size: 13px;">Select an action above and let the magic begin!</p>
+      <!-- API Key Settings -->
+      <div class="settings-group">
+        <div class="input-group">
+          <label for="apiKey">Gemini API Key</label>
+          <input type="password" id="apiKey" placeholder="Enter your Google AI Studio API key">
+          <small style="display: block; margin-top: 8px; opacity: 0.7; font-size: 11px;">
+            <a href="https://makersuite.google.com/app/apikey" target="_blank"
+              style="color: #93c5fd; text-decoration: none;">
+              Get API key from Google AI Studio ↗
+            </a>
+          </small>
+        </div>
       </div>
+
+      <!-- Feature Settings -->
+      <div class="settings-group">
+        <div class="checkbox-group">
+          <input type="checkbox" id="autoSelect" checked>
+          <label for="autoSelect">Auto-select AI answers</label>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" id="autoSaveQuiz" checked>
+          <label for="autoSaveQuiz">Auto-save quiz data</label>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" id="enableCopyPaste" checked>
+          <label for="enableCopyPaste">Enable copy/paste on GDBs</label>
+        </div>
+      </div>
+
+      <!-- Save Button -->
+      <button class="save-btn" id="saveBtn">Save Settings</button>
+
+      <!-- Status Message -->
+      <div id="status"></div>
+
+      <!-- Help Link -->
+      <a href="options.html" target="_blank" class="help-link">Open full settings page</a>
     </div>
 
+    <!-- Footer -->
     <div class="footer">
-      Powered by VU Empire
+      Powered by VU Empire • Made with ❤️ for VU Students
     </div>
   </div>
 
-  <script src="popup.js"></script>
+  <script src="script.js"></script>
 </body>
 
 </html>
