@@ -4,13 +4,46 @@ console.log('VU Empire Genie (MAIN World) - Lecture Mode');
 class VULectureGenie {
     constructor() {
         this.pageType = 'lecture';
+        this.settings = this.loadSettings();
         this.init();
+    }
+
+    loadSettings() {
+        try {
+            // Try to get settings from localStorage first
+            const savedSettings = localStorage.getItem('vuGenie_settings');
+            if (savedSettings) {
+                const settings = JSON.parse(savedSettings);
+                console.log('Loaded settings from localStorage:', settings);
+                return {
+                    autoSkipLecture: settings.autoSkipAllLectures || false,
+                    autoSelect: settings.autoSelect !== false, // default true
+                    autoSaveQuiz: settings.autoSaveQuiz !== false // default true
+                };
+            }
+        } catch (error) {
+            console.error('Error loading settings from localStorage:', error);
+        }
+
+        // Default settings
+        return {
+            autoSkipLecture: false,
+            autoSelect: true,
+            autoSaveQuiz: true
+        };
     }
 
     async init() {
         await this.waitForPageReady();
         this.injectUI();
-        // this.initFeatures();
+
+        console.log('Lecture Genie initialized with settings:', this.settings);
+
+        // Auto-skip lecture if enabled
+        if (this.settings.autoSkipLecture) {
+            console.log('Auto-skip lectures enabled. Skipping current lecture...');
+            await this.skipLecture();
+        }
     }
 
     async waitForPageReady() {
@@ -26,18 +59,29 @@ class VULectureGenie {
     injectUI() {
         if (document.getElementById('vu-genie-ui')) return;
 
+        const floatingBtnContainer = document.createElement("div");
+        floatingBtnContainer.classList.add("floating-btn-container");
+        const floatingBtn = document.createElement("button");
+        floatingBtn.innerHTML = 'vu'
+        floatingBtn.classList.add("floating-btn", "hide");
+        floatingBtnContainer.appendChild(floatingBtn);
+        document.body.appendChild(floatingBtnContainer);
+
         const container = document.createElement('div');
         container.id = 'vu-genie-ui';
         container.innerHTML = `
             <div class="vu-genie-container">
-                <div class="vu-genie-header">
-                    <h3>🎥 Lecture Assistant</h3>
+                <div class="vu-genie-content-wrapper">
+                    <div class="vu-genie-content">
+                        <button class="vu-btn ${this.settings.autoSkipLecture ? 'active' : ''}" data-action="auto-skip-lecture">
+                           ${this.settings.autoSkipLecture ? '✓ Auto Skip ON' : 'Auto Skip All Lectures'}
+                        </button>
+
+                        <button class="vu-btn primary" data-action="skip-lecture">
+                            Skip This Lecture
+                        </button>
+                    </div>
                     <button class="vu-genie-close">×</button>
-                </div>
-                <div class="vu-genie-content">
-                    <button class="vu-btn primary" data-action="mark-watched">
-                        Mark as Watched
-                    </button>
                 </div>
                 <div class="vu-genie-status" id="vu-genie-status">Ready</div>
             </div>
@@ -53,9 +97,10 @@ class VULectureGenie {
         const style = document.createElement('style');
         style.textContent = `
             #vu-genie-ui {
+                min-width: 250px;
                 position: fixed;
                 bottom: 20px;
-                right: 20px;
+                right: calc(50% - 175px);
                 z-index: 10000;
                 font-family: 'Segoe UI', Arial, sans-serif;
             }
@@ -64,12 +109,41 @@ class VULectureGenie {
                 background: rgba(0, 64, 128, 0.95);
                 backdrop-filter: blur(10px);
                 border-radius: 12px;
-                padding: 15px;
+                padding: 10px 15px 5px;
                 min-width: 250px;
                 color: white;
                 box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-                border: 1px solid rgba(255, 255, 255, 0.1);
                 animation: slideUp 0.3s ease;
+            }
+
+            .floating-btn-container{
+                position: fixed;
+                bottom: 40px;
+                right: 40px;
+                text-align: end;
+            }
+
+            .floating-btn{
+                background-color: rgba(0, 64, 128, 0.95);
+                color: white;
+                font-size: 22px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 20px 15px;
+                border-radius: 50%;
+                border: none;
+                outline: none;
+                text-transform: uppercase;
+                font-weight: bold;
+            }
+
+            .show{
+                display: block !important;
+            }
+
+            .hide{
+                display: none !important;
             }
             
             @keyframes slideUp {
@@ -77,23 +151,8 @@ class VULectureGenie {
                 to { transform: translateY(0); opacity: 1; }
             }
             
-            .vu-genie-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 15px;
-                padding-bottom: 10px;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-            }
-            
-            .vu-genie-header h3 {
-                margin: 0;
-                font-size: 16px;
-                font-weight: 600;
-            }
-            
             .vu-genie-close {
-                background: transparent;
+                background: red;
                 border: none;
                 color: white;
                 font-size: 24px;
@@ -105,24 +164,35 @@ class VULectureGenie {
                 align-items: center;
                 justify-content: center;
                 border-radius: 50%;
+                position: absolute;
+                top: -8px;
+                right: -8px;
             }
             
             .vu-genie-close:hover {
                 background: rgba(255, 255, 255, 0.1);
+                color: black;
+            }
+
+            .vu-genie-content-wrapper {
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
             
             .vu-genie-content {
                 display: flex;
-                flex-direction: column;
-                gap: 10px;
+                align-items: center;
+                justify-content: center;
+                gap: 18px;
             }
             
             .vu-btn {
-                padding: 10px 15px;
+                padding: 5px 10px;
                 border: none;
                 border-radius: 8px;
                 cursor: pointer;
-                font-weight: 500;
+                font-weight: 600;
                 font-size: 14px;
                 transition: all 0.2s;
             }
@@ -139,7 +209,7 @@ class VULectureGenie {
             
             .vu-genie-status {
                 margin-top: 10px;
-                padding-top: 10px;
+                padding-top: 5px;
                 border-top: 1px solid rgba(255, 255, 255, 0.1);
                 font-size: 12px;
                 opacity: 0.8;
@@ -151,15 +221,29 @@ class VULectureGenie {
 
     attachEventListeners() {
         const container = document.getElementById('vu-genie-ui');
+        const floatingBtn = document.querySelector(".floating-btn");
 
         // Close button
         container.querySelector('.vu-genie-close').addEventListener('click', () => {
             container.style.display = 'none';
+            floatingBtn.classList.remove('hide');
+            floatingBtn.classList.add('show');
+        });
+
+        floatingBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            container.style.display = 'block';
+            floatingBtn.classList.remove('show');
+            floatingBtn.classList.add('hide');
+        })
+
+        container.querySelector('[data-action="auto-skip-lecture"]').addEventListener('click', () => {
+            this.autoSkipLectures();
         });
 
         // Mark as watched button
-        container.querySelector('[data-action="mark-watched"]').addEventListener('click', () => {
-            this.markLectureAsWatched();
+        container.querySelector('[data-action="skip-lecture"]').addEventListener('click', () => {
+            this.skipLecture();
         });
     }
 
@@ -170,7 +254,7 @@ class VULectureGenie {
         }
     }
 
-    async markLectureAsWatched() {
+    async skipLecture() {
         try {
             this.updateStatus('Processing...');
 
@@ -203,7 +287,43 @@ class VULectureGenie {
             await this.safeNavigateToNext();
 
         } catch (error) {
-            console.error("Error in markLectureAsWatched:", error);
+            console.error("Error in skipLecture:", error);
+            this.showNotification(`❌ Error: ${error.message}`, 'error');
+        } finally {
+            this.updateStatus('Ready');
+        }
+    }
+
+    async autoSkipLectures() {
+        try {
+            // Toggle the setting
+            this.settings.autoSkipLecture = !this.settings.autoSkipLecture;
+
+            // Save to localStorage
+            try {
+                const savedSettings = localStorage.getItem('vuGenie_settings');
+                let settings = savedSettings ? JSON.parse(savedSettings) : {};
+                settings.autoSkipAllLectures = this.settings.autoSkipLecture;
+                localStorage.setItem('vuGenie_settings', JSON.stringify(settings));
+                console.log('Saved autoSkipAllLectures setting to localStorage:', this.settings.autoSkipLecture);
+            } catch (error) {
+                console.error('Error saving to localStorage:', error);
+            }
+
+            // Update UI
+            this.updateStatus(this.settings.autoSkipLecture ?
+                'Auto-skip enabled. Skipping lectures...' :
+                'Auto-skip disabled');
+
+            // If enabled, skip the current lecture
+            if (this.settings.autoSkipLecture) {
+                await this.skipLecture();
+            } else {
+                this.showNotification('Auto-skip lectures disabled', 'info');
+            }
+
+        } catch (error) {
+            console.error("Error in autoSkipLectures:", error);
             this.showNotification(`❌ Error: ${error.message}`, 'error');
         } finally {
             this.updateStatus('Ready');

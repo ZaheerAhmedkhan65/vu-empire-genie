@@ -193,9 +193,10 @@ class VUQuizGenie {
         const style = document.createElement('style');
         style.textContent = `
             #vu-genie-ui {
+                min-width: 250px;
                 position: fixed;
                 bottom: 20px;
-                right: 20px;
+                right: calc(50% - 175px);
                 z-index: 10000;
                 font-family: 'Segoe UI', Arial, sans-serif;
             }
@@ -226,7 +227,7 @@ class VUQuizGenie {
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                padding: 20px;
+                padding: 20px 15px;
                 border-radius: 50%;
                 border: none;
                 outline: none;

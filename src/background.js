@@ -18,6 +18,7 @@ chrome.runtime.onInstalled.addListener(async ({ reason }) => {
     autoSelect: true,
     autoSaveQuiz: true,
     enableCopyPaste: true,
+    autoSkipAllLectures: false,
     theme: 'dark',
     serverUrl: 'https://vu-empire-genie.vercel.app'
   });
@@ -44,7 +45,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse({
           autoSelect: result.autoSelect !== false,
           autoSaveQuiz: result.autoSaveQuiz !== false,
-          enableCopyPaste: result.enableCopyPaste !== false
+          enableCopyPaste: result.enableCopyPaste !== false,
+          autoSkipAllLectures: result.autoSkipAllLectures
         });
       });
       return true;
