@@ -154,6 +154,7 @@ class VULectureGenie {
             .vu-genie-close {
                 background: red;
                 border: none;
+                outline:none;
                 color: white;
                 font-size: 24px;
                 cursor: pointer;
