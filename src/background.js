@@ -1,27 +1,15 @@
 // background.js
+import settingsManager from './scripts/settings_manager.js';
+
 chrome.runtime.onInstalled.addListener(async ({ reason }) => {
   if (reason === 'install' || reason === 'update') {
-    const { apiKey, serverUrl } = await chrome.storage.sync.get(['apiKey', 'serverUrl']);
+    await settingsManager.initialize();
+
+    const apiKey = settingsManager.get('apiKey');
     if (!apiKey) {
       chrome.runtime.openOptionsPage();
     }
-    // Set default server URL if not set
-    if (!serverUrl) {
-      await chrome.storage.sync.set({
-        serverUrl: 'https://vu-empire-genie.vercel.app'
-      });
-    }
   }
-
-  await chrome.storage.sync.set({
-    apiKey: '',
-    autoSelect: true,
-    autoSaveQuiz: true,
-    enableCopyPaste: true,
-    autoSkipAllLectures: false,
-    theme: 'dark',
-    serverUrl: 'https://vu-empire-genie.vercel.app'
-  });
 });
 
 // Handle messages from both MAIN and ISOLATED worlds
@@ -34,21 +22,32 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({ success: true });
       break;
 
-    case 'GET_API_KEY':
-      chrome.storage.sync.get(['apiKey'], (result) => {
-        sendResponse({ apiKey: result.apiKey });
+    case 'TRACK_API_USAGE':
+      trackApiUsage(request.data);
+      sendResponse({ success: true });
+      break;
+
+    case 'GET_QUOTA_DATA':
+      chrome.storage.sync.get(['quotaData', 'lastQuotaUpdate'], (result) => {
+        sendResponse({
+          quotaData: result.quotaData,
+          lastQuotaUpdate: result.lastQuotaUpdate
+        });
       });
       return true;
 
+    case 'GET_API_KEY':
+      sendResponse({ apiKey: settingsManager.get('apiKey') });
+      return true;
+
     case 'GET_SETTINGS':
-      chrome.storage.sync.get(['autoSelect', 'autoSaveQuiz', 'enableCopyPaste'], (result) => {
-        sendResponse({
-          autoSelect: result.autoSelect !== false,
-          autoSaveQuiz: result.autoSaveQuiz !== false,
-          enableCopyPaste: result.enableCopyPaste !== false,
-          autoSkipAllLectures: result.autoSkipAllLectures
-        });
-      });
+      sendResponse(settingsManager.getAll());
+      return true;
+
+    case 'SAVE_SETTINGS':
+      settingsManager.saveToStorage(request.settings)
+        .then(() => sendResponse({ success: true }))
+        .catch(error => sendResponse({ success: false, error: error.message }));
       return true;
 
     case 'SAVE_QUIZ_DATA':
@@ -118,6 +117,74 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return true;
   }
 });
+
+async function trackApiUsage(usageData) {
+  try {
+    const result = await chrome.storage.local.get(['apiUsage']);
+    let usage = result.apiUsage || {
+      totalRequests: 0,
+      totalCharacters: 0,
+      dailyRequests: {},
+      lastUpdated: null
+    };
+
+    const today = new Date().toDateString();
+
+    if (!usage.dailyRequests[today]) {
+      usage.dailyRequests[today] = {
+        requests: 0,
+        characters: 0
+      };
+    }
+
+    usage.totalRequests += usageData.requests || 1;
+    usage.totalCharacters += usageData.characters || 0;
+    usage.dailyRequests[today].requests += usageData.requests || 1;
+    usage.dailyRequests[today].characters += usageData.characters || 0;
+    usage.lastUpdated = new Date().toISOString();
+
+    // Clean up old data (older than 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    Object.keys(usage.dailyRequests).forEach(date => {
+      if (new Date(date) < thirtyDaysAgo) {
+        delete usage.dailyRequests[date];
+      }
+    });
+
+    await chrome.storage.local.set({ apiUsage: usage });
+
+    // Update sync storage for popup display
+    const syncResult = await chrome.storage.sync.get(['quotaData']);
+    let quotaData = syncResult.quotaData || {
+      requestsPerDay: { used: 0, limit: 60 },
+      charactersPerDay: { used: 0, limit: 60000 },
+      requestsPerMinute: { used: 0, limit: 15 },
+      lastReset: new Date().toISOString(),
+      nextReset: getEndOfDay()
+    };
+
+    quotaData.requestsPerDay.used = usage.dailyRequests[today].requests;
+    quotaData.charactersPerDay.used = usage.dailyRequests[today].characters;
+    quotaData.totalRequests = usage.totalRequests;
+    quotaData.totalCharacters = usage.totalCharacters;
+
+    await chrome.storage.sync.set({
+      quotaData,
+      lastQuotaUpdate: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Error tracking API usage:', error);
+  }
+}
+
+function getEndOfDay() {
+  const now = new Date();
+  now.setHours(23, 59, 59, 999);
+  return now.toISOString();
+}
 
 async function saveQuizQuestionToServer(formattedData, sendResponse) {
   try {

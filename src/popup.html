@@ -20,6 +20,26 @@
       </div>
     </div>
 
+    <!-- Quota Usage Section -->
+    <div class="quota-section">
+      <div class="section-title">
+        <span>📊</span> Gemini API Usage
+      </div>
+    
+      <div id="quota-container" class="quota-info">
+        <div class="loading" id="quota-loading">
+          <div class="loading-spinner"></div>
+          <p>Loading quota information...</p>
+        </div>
+      </div>
+    
+      <button id="refresh-quota" class="refresh-btn">
+        🔄 Refresh
+      </button>
+    
+      <div id="last-updated" class="last-updated"></div>
+    </div>
+
     <!-- Page-Specific Actions -->
     <div id="page-actions">
       <!-- Dynamic content based on current page -->
@@ -28,6 +48,11 @@
     <!-- Settings Section -->
     <div class="settings-section">
       <div class="settings-title">Configuration</div>
+
+      <!-- API Key Status -->
+      <div id="api-key-status" class="api-key-status">
+        Checking API key...
+      </div>
 
       <!-- API Key Settings -->
       <div class="settings-group">
@@ -61,6 +86,25 @@
           <input type="checkbox" id="autoSkipAllLectures" checked>
           <label for="autoSkipAllLectures">Auto-skip Lectures</label>
         </div>
+
+        <!-- NEW QUIZ SETTINGS -->
+        <div class="quiz-settings-title"
+          style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+          <div style="font-size: 12px; opacity: 0.8; margin-bottom: 10px;">Advanced Quiz Settings</div>
+        </div>
+        
+        <div class="checkbox-group">
+          <input type="checkbox" id="showSolution" checked>
+          <label for="showSolution">Show Solution Popup</label>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" id="autoSolve" checked>
+          <label for="autoSolve">Auto-solve on Page Load</label>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" id="autoSaveAfterSolve" checked>
+          <label for="autoSaveAfterSolve">Auto-save & Next Question</label>
+        </div>
       </div>
 
       <!-- Save Button -->
@@ -79,7 +123,7 @@
     </div>
   </div>
 
-  <script src="scripts/script.js"></script>
+  <script type="module" src="scripts/script.js"></script>
 </body>
 
 </html>

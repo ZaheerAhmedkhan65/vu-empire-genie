@@ -7,11 +7,20 @@ class VUQuizGenie {
         this.isInitialized = false;
         this.chromeAvailable = false;
         this.apiKey = null;
-        this.settings = {
-            autoSelect: true,
-            autoSaveQuiz: true
-        };
+        this.settings = this.getDefaultSettings();
         this.init();
+    }
+
+    getDefaultSettings() {
+        return {
+            autoSelect: true,
+            autoSaveQuiz: true,
+            showSolution: true,
+            autoSolve: false,
+            autoSaveAfterSolve: false,
+            enableCopyPaste: true,
+            autoSkipAllLectures: false
+        };
     }
 
     async init() {
@@ -25,11 +34,10 @@ class VUQuizGenie {
 
         // Inject UI
         this.injectUI();
-
-        // Initialize features
-        // await this.initFeatures();
-
         this.isInitialized = true;
+
+        // Check and run auto-solve if enabled
+        await this.checkAndRunAutoSolve();
     }
 
     async checkChromeAvailability() {
@@ -43,13 +51,18 @@ class VUQuizGenie {
 
                 // Get settings
                 this.settings = await this.getSettingsSafely();
+
+                // Store settings in localStorage for fallback
+                this.saveSettingsToLocalStorage();
             } else {
                 console.log('⚠️ Chrome APIs not available');
                 this.chromeAvailable = false;
+                this.loadSettingsFromLocalStorage();
             }
         } catch (error) {
             console.error('Error checking Chrome availability:', error);
             this.chromeAvailable = false;
+            this.loadSettingsFromLocalStorage();
         }
     }
 
@@ -92,7 +105,10 @@ class VUQuizGenie {
                     const saved = localStorage.getItem('vuGenie_settings');
                     resolve(saved ? JSON.parse(saved) : {
                         autoSelect: true,
-                        autoSaveQuiz: true
+                        autoSaveQuiz: true,
+                        showSolution: false,
+                        autoSolve: false,
+                        autoSaveAfterSolve: false
                     });
                     return;
                 }
@@ -102,7 +118,10 @@ class VUQuizGenie {
                     const saved = localStorage.getItem('vuGenie_settings');
                     resolve(saved ? JSON.parse(saved) : {
                         autoSelect: true,
-                        autoSaveQuiz: true
+                        autoSaveQuiz: true,
+                        showSolution: false,
+                        autoSolve: false,
+                        autoSaveAfterSolve: false
                     });
                 }, 3000);
 
@@ -115,12 +134,22 @@ class VUQuizGenie {
                             const saved = localStorage.getItem('vuGenie_settings');
                             resolve(saved ? JSON.parse(saved) : {
                                 autoSelect: true,
-                                autoSaveQuiz: true
+                                autoSaveQuiz: true,
+                                showSolution: false,
+                                autoSolve: false,
+                                autoSaveAfterSolve: false
                             });
                         } else {
-                            resolve(response || {
-                                autoSelect: true,
-                                autoSaveQuiz: true
+                            // Ensure all new settings have default values
+                            const settings = response || {};
+                            resolve({
+                                autoSelect: settings.autoSelect !== false,
+                                autoSaveQuiz: settings.autoSaveQuiz !== false,
+                                showSolution: settings.showSolution !== false,
+                                autoSolve: settings.autoSolve === true,
+                                autoSaveAfterSolve: settings.autoSaveAfterSolve === true,
+                                enableCopyPaste: settings.enableCopyPaste !== false,
+                                autoSkipAllLectures: settings.autoSkipAllLectures === true
                             });
                         }
                     }
@@ -130,7 +159,10 @@ class VUQuizGenie {
                 const saved = localStorage.getItem('vuGenie_settings');
                 resolve(saved ? JSON.parse(saved) : {
                     autoSelect: true,
-                    autoSaveQuiz: true
+                    autoSaveQuiz: true,
+                    showSolution: false,
+                    autoSolve: false,
+                    autoSaveAfterSolve: false
                 });
             }
         });
@@ -163,20 +195,21 @@ class VUQuizGenie {
         container.id = 'vu-genie-ui';
         container.innerHTML = `
             <div class="vu-genie-container">
-                <div class="vu-genie-header">
-                    <h3>Quiz Assistant</h3>
+                <div class="vu-genie-content-wrapper">
+                    <div class="vu-genie-content" id="vu-genie-content">
+                        <button class="vu-btn primary" data-action="copy-quiz">
+                            Copy Quiz
+                        </button>
+
+                        <button class="vu-btn secondary" data-action="solve-with-ai">
+                            Solve with AI
+                        </button>
+
+                        <button class="vu-btn" data-action="download-pdf">
+                            Download Quiz
+                        </button>
+                    </div>
                     <button class="vu-genie-close">×</button>
-                </div>
-                <div class="vu-genie-content" id="vu-genie-content">
-                    <button class="vu-btn primary" data-action="copy-quiz">
-                        Copy Quiz
-                    </button>
-                    <button class="vu-btn secondary" data-action="solve-with-ai">
-                        Solve with AI
-                    </button>
-                    <button class="vu-btn" data-action="download-pdf">
-                        Download Quiz
-                    </button>
                 </div>
                 <div class="vu-genie-status" id="vu-genie-status">Ready</div>
             </div>
@@ -200,16 +233,15 @@ class VUQuizGenie {
                 z-index: 10000;
                 font-family: 'Segoe UI', Arial, sans-serif;
             }
-            
+
             .vu-genie-container {
                 background: rgba(0, 64, 128, 0.95);
                 backdrop-filter: blur(10px);
                 border-radius: 12px;
-                padding: 15px;
+                padding: 10px 15px 5px;
                 min-width: 250px;
                 color: white;
                 box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-                border: 1px solid rgba(255, 255, 255, 0.1);
                 animation: slideUp 0.3s ease;
             }
 
@@ -227,7 +259,7 @@ class VUQuizGenie {
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                padding: 20px 15px;
+                padding: 20px;
                 border-radius: 50%;
                 border: none;
                 outline: none;
@@ -240,32 +272,18 @@ class VUQuizGenie {
             }
 
             .hide{
-                display: none !important; 
+                display: none !important;
             }
-            
+
             @keyframes slideUp {
                 from { transform: translateY(100px); opacity: 0; }
                 to { transform: translateY(0); opacity: 1; }
             }
-            
-            .vu-genie-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 15px;
-                padding-bottom: 10px;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-            }
-            
-            .vu-genie-header h3 {
-                margin: 0;
-                font-size: 16px;
-                font-weight: 600;
-            }
-            
+
             .vu-genie-close {
-                background: transparent;
+                background: red;
                 border: none;
+                outline:none;
                 color: white;
                 font-size: 24px;
                 cursor: pointer;
@@ -276,31 +294,56 @@ class VUQuizGenie {
                 align-items: center;
                 justify-content: center;
                 border-radius: 50%;
+                position: absolute;
+                top: -8px;
+                right: -8px;
             }
-            
+
             .vu-genie-close:hover {
                 background: rgba(255, 255, 255, 0.1);
+                color: black;
             }
-            
+
+            .vu-genie-content-wrapper {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
             .vu-genie-content {
                 display: flex;
-                flex-direction: column;
-                gap: 10px;
+                align-items: center;
+                justify-content: center;
+                gap: 18px;
             }
-            
+
             .vu-btn {
-                padding: 10px 15px;
+                padding: 5px 10px;
                 border: none;
                 border-radius: 8px;
                 cursor: pointer;
-                font-weight: 500;
+                font-weight: 600;
                 font-size: 14px;
                 transition: all 0.2s;
             }
-            
+
             .vu-btn:hover {
                 transform: translateY(-2px);
                 box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            }
+
+            .vu-btn.primary {
+                background: #10b981;
+                color: white;
+            }
+
+            .vu-genie-status {
+                margin-top: 10px;
+                padding-top: 5px;
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
+                font-size: 12px;
+                opacity: 0.8;
+                text-align: center;
             }
             
             .vu-btn.primary {
@@ -311,15 +354,6 @@ class VUQuizGenie {
             .vu-btn.secondary {
                 background: #8b5cf6;
                 color: white;
-            }
-            
-            .vu-genie-status {
-                margin-top: 10px;
-                padding-top: 10px;
-                border-top: 1px solid rgba(255, 255, 255, 0.1);
-                font-size: 12px;
-                opacity: 0.8;
-                text-align: center;
             }
         `;
         document.head.appendChild(style);
@@ -471,7 +505,7 @@ class VUQuizGenie {
         prompt += `- Base answer on standard database administration concepts\n`;
 
         return prompt;
-    }   
+    }
 
     async extractQuizForAI() {
         try {
@@ -696,6 +730,205 @@ class VUQuizGenie {
         return { code, name };
     }
 
+    async trackApiUsage(requestChars = 0, responseChars = 0) {
+        try {
+            const result = await chrome.storage.local.get(['apiUsage']);
+            let usage = result.apiUsage || {
+                totalRequests: 0,
+                totalCharacters: 0,
+                dailyRequests: {},
+                lastUpdated: null
+            };
+
+            const today = new Date().toDateString();
+
+            if (!usage.dailyRequests[today]) {
+                usage.dailyRequests[today] = {
+                    requests: 0,
+                    characters: 0
+                };
+            }
+
+            usage.totalRequests++;
+            usage.totalCharacters += requestChars + responseChars;
+            usage.dailyRequests[today].requests++;
+            usage.dailyRequests[today].characters += requestChars + responseChars;
+            usage.lastUpdated = new Date().toISOString();
+
+            // Clean up old data (older than 30 days)
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+            Object.keys(usage.dailyRequests).forEach(date => {
+                if (new Date(date) < thirtyDaysAgo) {
+                    delete usage.dailyRequests[date];
+                }
+            });
+
+            await chrome.storage.local.set({ apiUsage: usage });
+
+            // Update sync storage for popup display
+            const syncResult = await chrome.storage.sync.get(['quotaData']);
+            let quotaData = syncResult.quotaData || {
+                requestsPerDay: { used: 0, limit: 1000 },
+                charactersPerDay: { used: 0, limit: 100000 },
+                requestsPerMinute: { used: 0, limit: 60 },
+                lastReset: new Date().toISOString(),
+                nextReset: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+            };
+
+            quotaData.requestsPerDay.used = usage.dailyRequests[today].requests;
+            quotaData.charactersPerDay.used = usage.dailyRequests[today].characters;
+
+            await chrome.storage.sync.set({
+                quotaData,
+                lastQuotaUpdate: new Date().toISOString()
+            });
+
+        } catch (error) {
+            console.error('Error tracking API usage:', error);
+        }
+    }
+
+    // Add a new method to check if auto-solve should run
+    async checkAndRunAutoSolve() {
+        try {
+            // Check if auto-solve is enabled and API key is available
+            if (this.settings.autoSolve && this.apiKey) {
+                console.log('Auto-solve enabled, running AI solve...');
+
+                // Add a small delay to ensure page is fully loaded
+                await new Promise(resolve => setTimeout(resolve, 2000));
+
+                // Check if we're on a quiz question page (not results page)
+                if (!window.location.href.includes('QuizFinished.aspx')) {
+                    await this.solveWithAI();
+
+                    // If auto-save is enabled, save and go to next question
+                    if (this.settings.autoSaveAfterSolve) {
+                        await this.autoSaveAndNext();
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error in auto-solve:', error);
+        }
+    }
+
+    // Add method to auto-save and go to next question
+    async autoSaveAndNext() {
+        try {
+            console.log('Auto-saving and moving to next question...');
+
+            // Find the save/next button
+            const nextButton = document.getElementById('btnSave');
+
+            if (nextButton && !nextButton.disabled) {
+                console.log('Clicking save/next button...');
+
+                // Click the button
+                nextButton.click();
+
+                // Wait a bit for the next question to load
+                await new Promise(resolve => setTimeout(resolve, 3000));
+
+                // Check if we're still on a quiz page (not finished)
+                if (window.location.href.includes('/Quiz/') &&
+                    !window.location.href.includes('QuizFinished.aspx')) {
+                    console.log('Next question loaded, running auto-solve again...');
+
+                    // Re-initialize for the new question
+                    this.isInitialized = false;
+                    await this.init();
+                }
+            } else if (nextButton && nextButton.disabled) {
+                console.log('Save button is disabled, trying to enable it...');
+
+                // Try to trigger EnableNextButton if it exists
+                if (typeof window.EnableNextButton === 'function') {
+                    window.EnableNextButton();
+
+                    // Wait a moment and try again
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+
+                    if (!nextButton.disabled) {
+                        nextButton.click();
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error in auto-save and next:', error);
+        }
+    }
+
+    async getSettingsSafely() {
+        return new Promise((resolve) => {
+            try {
+                if (!this.chromeAvailable) {
+                    this.loadSettingsFromLocalStorage();
+                    resolve(this.settings);
+                    return;
+                }
+
+                const timeout = setTimeout(() => {
+                    console.warn('Timeout getting settings');
+                    this.loadSettingsFromLocalStorage();
+                    resolve(this.settings);
+                }, 3000);
+
+                chrome.runtime.sendMessage(
+                    { type: 'GET_SETTINGS' },
+                    (response) => {
+                        clearTimeout(timeout);
+                        if (chrome.runtime.lastError) {
+                            console.warn('Error getting settings:', chrome.runtime.lastError.message);
+                            this.loadSettingsFromLocalStorage();
+                            resolve(this.settings);
+                        } else {
+                            // Merge response with defaults
+                            const settings = response || {};
+                            this.settings = {
+                                ...this.getDefaultSettings(),
+                                ...settings
+                            };
+                            console.log('Settings loaded from Chrome storage:', this.settings);
+                            resolve(this.settings);
+                        }
+                    }
+                );
+            } catch (error) {
+                console.error('Error in getSettingsSafely:', error);
+                this.loadSettingsFromLocalStorage();
+                resolve(this.settings);
+            }
+        });
+    }
+
+    loadSettingsFromLocalStorage() {
+        try {
+            const savedSettings = localStorage.getItem('vuGenie_settings');
+            if (savedSettings) {
+                const parsedSettings = JSON.parse(savedSettings);
+                this.settings = {
+                    ...this.getDefaultSettings(),
+                    ...parsedSettings
+                };
+                console.log('Settings loaded from localStorage:', this.settings);
+            }
+        } catch (error) {
+            console.error('Error loading settings from localStorage:', error);
+        }
+    }
+
+    saveSettingsToLocalStorage() {
+        try {
+            localStorage.setItem('vuGenie_settings', JSON.stringify(this.settings));
+            console.log('Settings saved to localStorage:', this.settings);
+        } catch (error) {
+            console.error('Error saving settings to localStorage:', error);
+        }
+    }
+
     async applyQuizSolution(quizData, aiResponse) {
         try {
             // Parse the AI response
@@ -706,18 +939,39 @@ class VUQuizGenie {
             }
 
             console.log('Parsed solution:', solution);
+            console.log('Current settings:', this.settings);
 
-            // Show the solution to user
-            this.displayQuizSolution(quizData, solution);
+            // Show solution popup if enabled
+            if (this.settings.showSolution) {
+                console.log('Showing solution popup (showSolution is true)');
+                this.displayQuizSolution(quizData, solution);
+            } else {
+                console.log('Skipping solution popup (showSolution is false)');
+            }
 
-            // Auto-select correct answers
-            if (this.settings.autoSelect !== false) { // Default to true
+            // Auto-select correct answers if enabled
+            if (this.settings.autoSelect) {
+                console.log('Auto-selecting answer (autoSelect is true)');
                 await this.autoSelectQuizAnswers(solution.correctAnswers, quizData.options);
+            } else {
+                console.log('Skipping auto-select (autoSelect is false)');
             }
 
             // Save quiz data for future reference
-            console.log("quizData", quizData, solution)
-            await this.saveQuizData(quizData, solution);
+            if (this.settings.autoSaveQuiz) {
+                console.log('Saving quiz data (autoSaveQuiz is true)');
+                await this.saveQuizData(quizData, solution);
+            } else {
+                console.log('Skipping save (autoSaveQuiz is false)');
+            }
+
+            // Auto-save and move to next question if enabled
+            if (this.settings.autoSaveAfterSolve) {
+                console.log('Auto-saving and moving to next question (autoSaveAfterSolve is true)');
+                await this.autoSaveAndNext();
+            } else {
+                console.log('Skipping auto-save after solve (autoSaveAfterSolve is false)');
+            }
 
         } catch (error) {
             console.error('Error applying solution:', error);
@@ -730,8 +984,9 @@ class VUQuizGenie {
             // Format the prompt for Gemini
             const prompt = this.formatQuizPrompt(quizData);
 
-            console.log('Sending to Gemini:', prompt);
-            console.log('API Key:', apiKey);
+            // Track request characters
+            const requestChars = prompt.length;
+
             // Call Gemini API
             const response = await fetch(
                 `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
@@ -763,6 +1018,20 @@ class VUQuizGenie {
 
             const data = await response.json();
             const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+            // Track response characters
+            const responseChars = aiText.length;
+
+            // Send usage data to background
+            if (this.chromeAvailable) {
+                chrome.runtime.sendMessage({
+                    type: 'TRACK_API_USAGE',
+                    data: {
+                        requests: 1,
+                        characters: requestChars + responseChars
+                    }
+                });
+            }
 
             console.log('Gemini response:', aiText);
             return aiText;

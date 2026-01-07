@@ -63,7 +63,8 @@
     }
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "options_ui": {
     "page": "options.html",
@@ -78,7 +79,8 @@
         "scripts/content_main.js",
         "scripts/content_isolated.js",
         "scripts/injector.js",
-        "scripts/pdfGenerator.js"
+        "scripts/pdfGenerator.js",
+        "scripts/settings_manager.js"
       ],
       "matches": [
         "https://vulms.vu.edu.pk/*",
