@@ -730,66 +730,6 @@ class VUQuizGenie {
         return { code, name };
     }
 
-    async trackApiUsage(requestChars = 0, responseChars = 0) {
-        try {
-            const result = await chrome.storage.local.get(['apiUsage']);
-            let usage = result.apiUsage || {
-                totalRequests: 0,
-                totalCharacters: 0,
-                dailyRequests: {},
-                lastUpdated: null
-            };
-
-            const today = new Date().toDateString();
-
-            if (!usage.dailyRequests[today]) {
-                usage.dailyRequests[today] = {
-                    requests: 0,
-                    characters: 0
-                };
-            }
-
-            usage.totalRequests++;
-            usage.totalCharacters += requestChars + responseChars;
-            usage.dailyRequests[today].requests++;
-            usage.dailyRequests[today].characters += requestChars + responseChars;
-            usage.lastUpdated = new Date().toISOString();
-
-            // Clean up old data (older than 30 days)
-            const thirtyDaysAgo = new Date();
-            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-            Object.keys(usage.dailyRequests).forEach(date => {
-                if (new Date(date) < thirtyDaysAgo) {
-                    delete usage.dailyRequests[date];
-                }
-            });
-
-            await chrome.storage.local.set({ apiUsage: usage });
-
-            // Update sync storage for popup display
-            const syncResult = await chrome.storage.sync.get(['quotaData']);
-            let quotaData = syncResult.quotaData || {
-                requestsPerDay: { used: 0, limit: 1000 },
-                charactersPerDay: { used: 0, limit: 100000 },
-                requestsPerMinute: { used: 0, limit: 60 },
-                lastReset: new Date().toISOString(),
-                nextReset: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-            };
-
-            quotaData.requestsPerDay.used = usage.dailyRequests[today].requests;
-            quotaData.charactersPerDay.used = usage.dailyRequests[today].characters;
-
-            await chrome.storage.sync.set({
-                quotaData,
-                lastQuotaUpdate: new Date().toISOString()
-            });
-
-        } catch (error) {
-            console.error('Error tracking API usage:', error);
-        }
-    }
-
     // Add a new method to check if auto-solve should run
     async checkAndRunAutoSolve() {
         try {
@@ -984,9 +924,6 @@ class VUQuizGenie {
             // Format the prompt for Gemini
             const prompt = this.formatQuizPrompt(quizData);
 
-            // Track request characters
-            const requestChars = prompt.length;
-
             // Call Gemini API
             const response = await fetch(
                 `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
@@ -1013,25 +950,21 @@ class VUQuizGenie {
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(`Gemini API error: ${errorData.error?.message || response.status}`);
+
+                // Simplified error message for quota limit
+                if (errorData.error?.code === 429 ||
+                    errorData.error?.message?.includes('quota') ||
+                    errorData.error?.message?.includes('limit')) {
+                    throw new Error('API free limit reached. Try again tomorrow.');
+                }
+
+                // Other errors
+                throw new Error(`API error: ${errorData.error?.message || 'Unknown error'}`);
             }
 
             const data = await response.json();
             const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
-            // Track response characters
-            const responseChars = aiText.length;
-
-            // Send usage data to background
-            if (this.chromeAvailable) {
-                chrome.runtime.sendMessage({
-                    type: 'TRACK_API_USAGE',
-                    data: {
-                        requests: 1,
-                        characters: requestChars + responseChars
-                    }
-                });
-            }
 
             console.log('Gemini response:', aiText);
             return aiText;
