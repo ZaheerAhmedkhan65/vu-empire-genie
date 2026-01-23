@@ -22,20 +22,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({ success: true });
       break;
 
-    case 'TRACK_API_USAGE':
-      trackApiUsage(request.data);
-      sendResponse({ success: true });
-      break;
-
-    case 'GET_QUOTA_DATA':
-      chrome.storage.sync.get(['quotaData', 'lastQuotaUpdate'], (result) => {
-        sendResponse({
-          quotaData: result.quotaData,
-          lastQuotaUpdate: result.lastQuotaUpdate
-        });
-      });
-      return true;
-
     case 'GET_API_KEY':
       sendResponse({ apiKey: settingsManager.get('apiKey') });
       return true;
@@ -74,7 +60,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
         console.log("formattedData", formattedData)
         chrome.storage.local.set({ quizData }, () => {
-          saveQuizQuestionToServer(formattedData, sendResponse);
+          // saveQuizQuestionToServer(formattedData, sendResponse);
         });
         sendResponse({ success: true });
       });
@@ -118,73 +104,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-async function trackApiUsage(usageData) {
-  try {
-    const result = await chrome.storage.local.get(['apiUsage']);
-    let usage = result.apiUsage || {
-      totalRequests: 0,
-      totalCharacters: 0,
-      dailyRequests: {},
-      lastUpdated: null
-    };
-
-    const today = new Date().toDateString();
-
-    if (!usage.dailyRequests[today]) {
-      usage.dailyRequests[today] = {
-        requests: 0,
-        characters: 0
-      };
-    }
-
-    usage.totalRequests += usageData.requests || 1;
-    usage.totalCharacters += usageData.characters || 0;
-    usage.dailyRequests[today].requests += usageData.requests || 1;
-    usage.dailyRequests[today].characters += usageData.characters || 0;
-    usage.lastUpdated = new Date().toISOString();
-
-    // Clean up old data (older than 30 days)
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-    Object.keys(usage.dailyRequests).forEach(date => {
-      if (new Date(date) < thirtyDaysAgo) {
-        delete usage.dailyRequests[date];
-      }
-    });
-
-    await chrome.storage.local.set({ apiUsage: usage });
-
-    // Update sync storage for popup display
-    const syncResult = await chrome.storage.sync.get(['quotaData']);
-    let quotaData = syncResult.quotaData || {
-      requestsPerDay: { used: 0, limit: 60 },
-      charactersPerDay: { used: 0, limit: 60000 },
-      requestsPerMinute: { used: 0, limit: 15 },
-      lastReset: new Date().toISOString(),
-      nextReset: getEndOfDay()
-    };
-
-    quotaData.requestsPerDay.used = usage.dailyRequests[today].requests;
-    quotaData.charactersPerDay.used = usage.dailyRequests[today].characters;
-    quotaData.totalRequests = usage.totalRequests;
-    quotaData.totalCharacters = usage.totalCharacters;
-
-    await chrome.storage.sync.set({
-      quotaData,
-      lastQuotaUpdate: new Date().toISOString()
-    });
-
-  } catch (error) {
-    console.error('Error tracking API usage:', error);
-  }
-}
-
-function getEndOfDay() {
-  const now = new Date();
-  now.setHours(23, 59, 59, 999);
-  return now.toISOString();
-}
 
 async function saveQuizQuestionToServer(formattedData, sendResponse) {
   try {

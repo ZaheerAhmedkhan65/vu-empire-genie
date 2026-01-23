@@ -20,26 +20,6 @@
       </div>
     </div>
 
-    <!-- Quota Usage Section -->
-    <div class="quota-section">
-      <div class="section-title">
-        <span>📊</span> Gemini API Usage
-      </div>
-    
-      <div id="quota-container" class="quota-info">
-        <div class="loading" id="quota-loading">
-          <div class="loading-spinner"></div>
-          <p>Loading quota information...</p>
-        </div>
-      </div>
-    
-      <button id="refresh-quota" class="refresh-btn">
-        🔄 Refresh
-      </button>
-    
-      <div id="last-updated" class="last-updated"></div>
-    </div>
-
     <!-- Page-Specific Actions -->
     <div id="page-actions">
       <!-- Dynamic content based on current page -->
@@ -48,11 +28,6 @@
     <!-- Settings Section -->
     <div class="settings-section">
       <div class="settings-title">Configuration</div>
-
-      <!-- API Key Status -->
-      <div id="api-key-status" class="api-key-status">
-        Checking API key...
-      </div>
 
       <!-- API Key Settings -->
       <div class="settings-group">
@@ -66,61 +41,110 @@
             </a>
           </small>
         </div>
+        <div class="api-status-section">
+          <div class="section-title">
+            API Status
+          </div>
+          <div id="api-status" class="api-status">
+            <div id="api-status-loading" class="loading" style="display: none;">
+              <div class="loading-spinner"></div>
+              <p>Checking API...</p>
+            </div>
+            <div id="api-status-message" style="display: none;">
+              <span class="status-icon">✅</span>
+              <span class="status-text">API ready</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Feature Settings -->
       <div class="settings-group">
-        <div class="checkbox-group">
-          <input type="checkbox" id="autoSelect" checked>
-          <label for="autoSelect">Auto-select Quiz Answer</label>
+        <div class="toggle-item">
+          <div class="toggle-label">
+            <span>✅</span>
+            <span class="toggle-text">Auto-select Quiz Answer</span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="autoSelect" checked>
+            <span class="toggle-slider"></span>
+          </label>
         </div>
-        <div class="checkbox-group">
-          <input type="checkbox" id="autoSaveQuiz" checked>
-          <label for="autoSaveQuiz">Auto-save Quiz Question</label>
+        <div class="toggle-item">
+          <div class="toggle-label">
+            <span>💾</span>
+            <span class="toggle-text">Auto-save Quiz Question</span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="autoSaveQuiz" checked>
+            <span class="toggle-slider"></span>
+          </label>
         </div>
-        <div class="checkbox-group">
-          <input type="checkbox" id="enableCopyPaste" checked>
-          <label for="enableCopyPaste">Enable GDBs Copy-Paste</label>
+        <div class="toggle-item">
+          <div class="toggle-label">
+            <span>📋</span>
+            <span class="toggle-text">Enable GDBs Copy-Paste</span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="enableCopyPaste" checked>
+            <span class="toggle-slider"></span>
+          </label>
         </div>
-        <div class="checkbox-group">
-          <input type="checkbox" id="autoSkipAllLectures" checked>
-          <label for="autoSkipAllLectures">Auto-skip Lectures</label>
+        <div class="toggle-item">
+          <div class="toggle-label">
+            <span>⏭️</span>
+            <span class="toggle-text">Auto-skip Lectures</span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="autoSkipAllLectures" checked>
+            <span class="toggle-slider"></span>
+          </label>
         </div>
-
-        <!-- NEW QUIZ SETTINGS -->
-        <div class="quiz-settings-title"
-          style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
-          <div style="font-size: 12px; opacity: 0.8; margin-bottom: 10px;">Advanced Quiz Settings</div>
+        <div class="toggle-item">
+          <div class="toggle-label">
+            <span>🔍</span>
+            <span class="toggle-text">Show Solution Popup</span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="showSolution" checked>
+            <span class="toggle-slider"></span>
+          </label>
         </div>
-        
-        <div class="checkbox-group">
-          <input type="checkbox" id="showSolution" checked>
-          <label for="showSolution">Show Solution Popup</label>
+        <div class="toggle-item">
+          <div class="toggle-label">
+            <span>🤖</span>
+            <span class="toggle-text">Auto-solve on Page Load</span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="autoSolve" checked>
+            <span class="toggle-slider"></span>
+          </label>
         </div>
-        <div class="checkbox-group">
-          <input type="checkbox" id="autoSolve" checked>
-          <label for="autoSolve">Auto-solve on Page Load</label>
+        <div class="toggle-item">
+          <div class="toggle-label">
+            <span>➡️</span>
+            <span class="toggle-text">Auto-save & Next Question</span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="autoSaveAfterSolve" checked>
+            <span class="toggle-slider"></span>
+          </label>
         </div>
-        <div class="checkbox-group">
-          <input type="checkbox" id="autoSaveAfterSolve" checked>
-          <label for="autoSaveAfterSolve">Auto-save & Next Question</label>
-        </div>
+        <!-- Save Button -->
+        <button class="save-btn" id="saveBtn">Save Settings</button>
       </div>
+    </div>  
 
-      <!-- Save Button -->
-      <button class="save-btn" id="saveBtn">Save Settings</button>
+    <!-- Status Message -->
+    <div id="status"></div>
 
-      <!-- Status Message -->
-      <div id="status"></div>
-
-      <!-- Help Link -->
-      <a href="options.html" target="_blank" class="help-link">Open full settings page</a>
-    </div>
-
+    <!-- Help Link -->
+    <a href="options.html" target="_blank" class="help-link">Open full settings page</a>
     <!-- Footer -->
     <div class="footer">
       Powered by VU Empire • Made with ❤️ for VU Students
     </div>
+  </div>
   </div>
 
   <script type="module" src="scripts/script.js"></script>

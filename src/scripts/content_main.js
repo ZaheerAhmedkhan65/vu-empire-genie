@@ -1,5 +1,5 @@
-// content_main.js - For lectures
-console.log('VU Empire Genie (MAIN World) - Lecture Mode');
+// content_main.js - FIXED with proper error handling
+console.log('VU Empire Genie (MAIN World) - Lecture Mode - FIXED');
 
 class VULectureGenie {
     constructor() {
@@ -10,22 +10,19 @@ class VULectureGenie {
 
     loadSettings() {
         try {
-            // Try to get settings from localStorage first
             const savedSettings = localStorage.getItem('vuGenie_settings');
             if (savedSettings) {
                 const settings = JSON.parse(savedSettings);
-                console.log('Loaded settings from localStorage:', settings);
                 return {
                     autoSkipLecture: settings.autoSkipAllLectures || false,
-                    autoSelect: settings.autoSelect !== false, // default true
-                    autoSaveQuiz: settings.autoSaveQuiz !== false // default true
+                    autoSelect: settings.autoSelect !== false,
+                    autoSaveQuiz: settings.autoSaveQuiz !== false
                 };
             }
         } catch (error) {
             console.error('Error loading settings from localStorage:', error);
         }
 
-        // Default settings
         return {
             autoSkipLecture: false,
             autoSelect: true,
@@ -47,13 +44,14 @@ class VULectureGenie {
     }
 
     async waitForPageReady() {
-        return new Promise(resolve => {
-            if (document.readyState === 'complete') {
-                setTimeout(resolve, 1000);
-            } else {
-                window.addEventListener('load', () => setTimeout(resolve, 1000));
-            }
-        });
+        if (document.readyState === 'loading') {
+            return new Promise(resolve => {
+                document.addEventListener('DOMContentLoaded', () => {
+                    setTimeout(resolve, 300);
+                });
+            });
+        }
+        return Promise.resolve();
     }
 
     injectUI() {
@@ -62,7 +60,7 @@ class VULectureGenie {
         const floatingBtnContainer = document.createElement("div");
         floatingBtnContainer.classList.add("floating-btn-container");
         const floatingBtn = document.createElement("button");
-        floatingBtn.innerHTML = 'vu'
+        floatingBtn.innerHTML = 'vu';
         floatingBtn.classList.add("floating-btn", "hide");
         floatingBtnContainer.appendChild(floatingBtn);
         document.body.appendChild(floatingBtnContainer);
@@ -87,7 +85,6 @@ class VULectureGenie {
             </div>
         `;
 
-        // Add styles
         this.injectStyles();
         document.body.appendChild(container);
         this.attachEventListeners();
@@ -138,13 +135,8 @@ class VULectureGenie {
                 font-weight: bold;
             }
 
-            .show{
-                display: block !important;
-            }
-
-            .hide{
-                display: none !important;
-            }
+            .show{ display: block !important; }
+            .hide{ display: none !important; }
             
             @keyframes slideUp {
                 from { transform: translateY(100px); opacity: 0; }
@@ -224,7 +216,6 @@ class VULectureGenie {
         const container = document.getElementById('vu-genie-ui');
         const floatingBtn = document.querySelector(".floating-btn");
 
-        // Close button
         container.querySelector('.vu-genie-close').addEventListener('click', () => {
             container.style.display = 'none';
             floatingBtn.classList.remove('hide');
@@ -236,13 +227,12 @@ class VULectureGenie {
             container.style.display = 'block';
             floatingBtn.classList.remove('show');
             floatingBtn.classList.add('hide');
-        })
+        });
 
         container.querySelector('[data-action="auto-skip-lecture"]').addEventListener('click', () => {
             this.autoSkipLectures();
         });
 
-        // Mark as watched button
         container.querySelector('[data-action="skip-lecture"]').addEventListener('click', () => {
             this.skipLecture();
         });
@@ -258,581 +248,58 @@ class VULectureGenie {
     async skipLecture() {
         try {
             this.updateStatus('Processing...');
+            const startTime = Date.now();
 
-            // Get lecture data
-            const data = this.extractLectureData();
-            console.log("Lecture data:", data);
+            // 1. Update all tab UIs instantly
+            this.updateAllTabUIsInstantly();
 
-            if (!data.studentId || !data.courseCode) {
-                throw new Error("Missing student or course information");
-            }
+            // 2. Save all tabs to database with 85% watched duration
+            await this.saveAllTabsWith85Percent();
 
-            // Process ALL tabs with rate limiting
-            const success = await this.processAllTabsWithDelay();
+            // 3. Trigger completion and navigation
+            await this.triggerCompletionAndNavigate();
 
-            if (!success) {
-                this.showNotification('⚠️ Some tabs may not have been saved. Please wait and try again.', 'warning');
-                return;
-            }
-
-            // Wait longer for server to process all requests
-            await new Promise(resolve => setTimeout(resolve, 3000));
-
-            // Try to trigger completion ONCE
-            await this.triggerLessonCompletion();
-
-            // Wait for completion to register
-            await new Promise(resolve => setTimeout(resolve, 2000));
-
-            // Now navigate to next lecture - but only if we can
-            await this.safeNavigateToNext();
+            const elapsed = Date.now() - startTime;
+            this.updateStatus(`Completed in ${elapsed}ms`);
+            console.log(`✅ Lecture skipped in ${elapsed}ms`);
 
         } catch (error) {
             console.error("Error in skipLecture:", error);
             this.showNotification(`❌ Error: ${error.message}`, 'error');
-        } finally {
-            this.updateStatus('Ready');
+            this.updateStatus('Error');
         }
     }
 
-    async autoSkipLectures() {
-        try {
-            // Toggle the setting
-            this.settings.autoSkipLecture = !this.settings.autoSkipLecture;
+    updateAllTabUIsInstantly() {
+        console.log("Updating all tab UIs instantly...");
 
-            // Save to localStorage
-            try {
-                const savedSettings = localStorage.getItem('vuGenie_settings');
-                let settings = savedSettings ? JSON.parse(savedSettings) : {};
-                settings.autoSkipAllLectures = this.settings.autoSkipLecture;
-                localStorage.setItem('vuGenie_settings', JSON.stringify(settings));
-                console.log('Saved autoSkipAllLectures setting to localStorage:', this.settings.autoSkipLecture);
-            } catch (error) {
-                console.error('Error saving to localStorage:', error);
-            }
+        const allTabElements = document.querySelectorAll('a.nav-link[id^="tabHeader"]');
 
-            // Update UI
-            this.updateStatus(this.settings.autoSkipLecture ?
-                'Auto-skip enabled. Skipping lectures...' :
-                'Auto-skip disabled');
-
-            // If enabled, skip the current lecture
-            if (this.settings.autoSkipLecture) {
-                await this.skipLecture();
-            } else {
-                this.showNotification('Auto-skip lectures disabled', 'info');
-            }
-
-        } catch (error) {
-            console.error("Error in autoSkipLectures:", error);
-            this.showNotification(`❌ Error: ${error.message}`, 'error');
-        } finally {
-            this.updateStatus('Ready');
+        for (const tabElement of allTabElements) {
+            const tabId = tabElement.id.replace('tabHeader', '');
+            this.markTabAsCompleted(tabId);
         }
+
+        console.log(`✅ Updated ${allTabElements.length} tab UIs`);
     }
 
-    async processAllTabsWithDelay() {
-        console.log("Processing all tabs with delay...");
-
+    markTabAsCompleted(tabId) {
         try {
-            // Get all tab IDs
-            const allTabElements = document.querySelectorAll('a.nav-link[id^="tabHeader"]');
-            const tabsToProcess = [];
-
-            // Collect all tab data
-            for (const tabElement of allTabElements) {
-                const tabId = tabElement.id.replace('tabHeader', '');
-                const tabData = this.extractTabData(tabId);
-                if (tabData) {
-                    tabsToProcess.push(tabData);
-                }
-            }
-
-            console.log(`Found ${tabsToProcess.length} tabs to process`);
-
-            // Track success/failure
-            let successCount = 0;
-            let failureCount = 0;
-
-            // Sort tabs: video tabs first, then others
-            tabsToProcess.sort((a, b) => {
-                if (a.isVideo && !b.isVideo) return -1;
-                if (!a.isVideo && b.isVideo) return 1;
-                return 0;
-            });
-
-            // Process each tab with appropriate delay
-            for (let i = 0; i < tabsToProcess.length; i++) {
-                const tabData = tabsToProcess[i];
-
-                try {
-                    console.log(`Processing tab ${i + 1}/${tabsToProcess.length}: ${tabData.tabName} (${tabData.isVideo ? 'Video' : 'Reading/Assessment'})`);
-
-                    // Update UI status first
-                    this.updateTabStatus(tabData.tabId, 'Completed');
-
-                    // Only save to database if PageMethods exists
-                    if (typeof PageMethods?.SaveStudentVideoLog === 'function') {
-                        // Adjust delay based on content type
-                        let delay;
-                        if (tabData.isVideo) {
-                            // Longer delay for videos (they take more processing)
-                            delay = 2000 + Math.random() * 3000; // 2-5 seconds
-                        } else {
-                            // Shorter delay for reading/assessment
-                            delay = 1000 + Math.random() * 2000; // 1-3 seconds
-                        }
-
-                        console.log(`Waiting ${Math.round(delay / 1000)}s before saving ${tabData.tabName}...`);
-                        await new Promise(resolve => setTimeout(resolve, delay));
-
-                        const saveResult = await this.saveTabToDatabaseSafely(tabData);
-
-                        if (saveResult) {
-                            successCount++;
-                            console.log(`✅ Tab ${tabData.tabName} saved successfully`);
-                        } else {
-                            failureCount++;
-                            console.warn(`⚠️ Tab ${tabData.tabName} save failed`);
-
-                            // If video tab fails, add extra delay before next attempt
-                            if (tabData.isVideo) {
-                                await new Promise(resolve => setTimeout(resolve, 3000));
-                            }
-                        }
-                    } else {
-                        // If no PageMethods, just update UI
-                        successCount++;
-                        console.log(`✅ Tab ${tabData.tabName} UI updated (no database save)`);
-                    }
-
-                    // If it's an assessment tab, try to skip it
-                    if (tabData.typeFlag === -2) {
-                        await this.skipAssessmentInTab(tabData.tabId);
-                    }
-
-                } catch (error) {
-                    console.error(`❌ Error processing tab ${tabData.tabName}:`, error);
-                    failureCount++;
-
-                    // Extra delay after error
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                }
-
-                // Update progress
-                this.updateStatus(`Processed ${i + 1}/${tabsToProcess.length} tabs`);
-            }
-
-            console.log(`Processing complete: ${successCount} successful, ${failureCount} failed`);
-
-            // Return true if majority succeeded
-            return successCount > failureCount;
-
-        } catch (error) {
-            console.error("Error processing tabs:", error);
-            return false;
-        }
-    }
-
-    async triggerLessonCompletion() {
-        try {
-            console.log("Triggering lesson completion...");
-
-            // Try to find and click completion buttons
-            const completionButtons = [
-                document.querySelector('#btnComplete'),
-                document.querySelector('#btnMarkComplete'),
-                document.querySelector('#btnFinish'),
-                document.querySelector('[onclick*="CompleteLesson"]'),
-                document.querySelector('[onclick*="MarkComplete"]')
-            ].filter(btn => btn && !btn.disabled);
-
-            for (const button of completionButtons) {
-                console.log(`Clicking completion button: ${button.id || button.textContent}`);
-                button.click();
-                await new Promise(resolve => setTimeout(resolve, 1000));
-            }
-
-            // Try to call VU's completion functions if they exist
-            if (typeof UpdateTabStatus === 'function') {
-                UpdateTabStatus("Completed", "0", "-2");
-            }
-
-            if (typeof UpdateLessonCompletion === 'function') {
-                UpdateLessonCompletion();
-            }
-
-            console.log("✅ Lesson completion triggered");
-
-        } catch (error) {
-            console.warn("⚠️ Could not trigger lesson completion:", error);
-        }
-    }
-
-    async processAllTabs() {
-        console.log("Processing all tabs...");
-
-        try {
-            // Get all tab IDs
-            const allTabElements = document.querySelectorAll('a.nav-link[id^="tabHeader"]');
-            const tabsToProcess = [];
-
-            // Collect all tab data
-            for (const tabElement of allTabElements) {
-                const tabId = tabElement.id.replace('tabHeader', '');
-                const tabData = this.extractTabData(tabId);
-                if (tabData) {
-                    tabsToProcess.push(tabData);
-                }
-            }
-
-            console.log(`Found ${tabsToProcess.length} tabs to process:`, tabsToProcess);
-
-            // Process each tab
-            for (const tabData of tabsToProcess) {
-                await this.processSingleTab(tabData);
-                await new Promise(resolve => setTimeout(resolve, 500)); // Delay between tabs
-            }
-
-        } catch (error) {
-            console.error("Error processing tabs:", error);
-            throw error;
-        }
-    }
-
-    extractTabData(tabId) {
-        try {
-            const contentId = document.getElementById(`hfContentID${tabId}`)?.value;
-            if (!contentId) return null;
-
-            const studentId = document.getElementById("hfStudentID")?.value;
-            const courseCode = document.getElementById("hfCourseCode")?.value;
-            const semester = document.getElementById("hfEnrollmentSemester")?.value || "";
-            const lessonNo = document.getElementById("MainContent_lblLessonTitle")?.getAttribute("title")?.match(/Lesson\s*(\d+)/)?.[1];
-
-            const videoId = document.getElementById(`hfVideoID${tabId}`)?.value;
-            const isVideo = document.getElementById(`hfIsVideo${tabId}`)?.value === "1";
-            const tabType = document.getElementById(`hfTabType${tabId}`)?.value || "";
-            const tabName = document.querySelector(`#tabHeader${tabId}`)?.textContent?.trim() || `Tab ${tabId}`;
-
-            // Determine type flag
-            let typeFlag = 0; // Default for reading
-            if (isVideo) {
-                typeFlag = 1;
-            } else if (tabType.includes("formativeassessment") || tabType.includes("assessment")) {
-                typeFlag = -2;
-            }
-
-            return {
-                tabId,
-                contentId,
-                videoId,
-                isVideo,
-                tabType,
-                typeFlag,
-                tabName,
-                studentId,
-                courseCode,
-                semester,
-                lessonNo
-            };
-        } catch (error) {
-            console.error(`Error extracting data for tab ${tabId}:`, error);
-            return null;
-        }
-    }
-
-    async processSingleTab(tabData) {
-        console.log(`Processing tab: ${tabData.tabName} (${tabData.tabId})`);
-
-        try {
-            // Update UI status
-            this.updateTabStatus(tabData.tabId, 'Completed');
-
-            // Save to database via PageMethods
-            if (typeof PageMethods?.SaveStudentVideoLog === 'function') {
-                await this.saveTabToDatabase(tabData);
-            }
-
-            // If it's an assessment tab, try to skip it
-            if (tabData.typeFlag === -2) {
-                await this.skipAssessmentInTab(tabData.tabId);
-            }
-
-            console.log(`✅ Tab ${tabData.tabName} processed successfully`);
-
-        } catch (error) {
-            console.error(`❌ Error processing tab ${tabData.tabName}:`, error);
-            // Continue with other tabs even if one fails
-        }
-    }
-
-    async saveTabToDatabaseSafely(tabData) {
-        return new Promise((resolve) => {
-            try {
-                // Get actual video duration for video tabs, otherwise use defaults
-                let totalDuration = 60; // Default 1 minute for reading
-
-                if (tabData.isVideo) {
-                    totalDuration = this.getVideoDuration(tabData.tabId);
-                } else if (tabData.typeFlag === -2) {
-                    totalDuration = 120; // 2 minutes for assessments
-                }
-
-                // Calculate watched duration based on content type
-                const watchedDuration = this.calculateWatchedDuration(totalDuration, tabData.tabId);
-
-                console.log(`Saving tab ${tabData.tabName}: total=${totalDuration}s, watched=${watchedDuration}s, type=${tabData.typeFlag}`);
-
-                // Set timeout for the request
-                const timeout = setTimeout(() => {
-                    console.warn(`⚠️ Timeout saving ${tabData.tabName}`);
-                    resolve(false);
-                }, 15000); // 15 second timeout (increased for video processing)
-
-                PageMethods.SaveStudentVideoLog(
-                    tabData.studentId,
-                    tabData.courseCode,
-                    tabData.semester,
-                    tabData.lessonNo,
-                    tabData.contentId,
-                    watchedDuration, // Actual watched duration
-                    totalDuration,   // Actual total duration
-                    tabData.videoId || "",
-                    tabData.typeFlag,
-                    window.location.href,
-                    (result) => {
-                        clearTimeout(timeout);
-                        console.log(`✅ ${tabData.tabName} saved:`, result);
-                        resolve(true);
-                    },
-                    (error) => {
-                        clearTimeout(timeout);
-                        console.warn(`⚠️ ${tabData.tabName} save error:`, error);
-
-                        // Check for specific error types
-                        if (error && error.message && (
-                            error.message.includes('502') ||
-                            error.message.includes('gateway') ||
-                            error.message.includes('timeout')
-                        )) {
-                            console.log("Server error detected, will retry once");
-                            // Could implement retry logic here
-                        }
-
-                        resolve(false);
-                    }
-                );
-
-            } catch (error) {
-                console.error(`❌ Exception saving ${tabData.tabName}:`, error);
-                resolve(false);
-            }
-        });
-    }
-
-    async saveTabToDatabase(tabData) {
-        return new Promise((resolve, reject) => {
-            try {
-                // Get actual video duration for video tabs, otherwise use defaults
-                let totalDuration = 60; // Default 1 minute for reading
-
-                if (tabData.isVideo) {
-                    totalDuration = this.getVideoDuration(tabData.tabId);
-                } else if (tabData.typeFlag === -2) {
-                    totalDuration = 120; // 2 minutes for assessments
-                }
-
-                // Calculate watched duration based on content type
-                const watchedDuration = this.calculateWatchedDuration(totalDuration, tabData.tabId);
-
-                console.log(`Saving tab ${tabData.tabName}: total=${totalDuration}s, watched=${watchedDuration}s, type=${tabData.typeFlag}`);
-
-                PageMethods.SaveStudentVideoLog(
-                    tabData.studentId,
-                    tabData.courseCode,
-                    tabData.semester,
-                    tabData.lessonNo,
-                    tabData.contentId,
-                    watchedDuration, // Actual watched duration
-                    totalDuration,   // Actual total duration
-                    tabData.videoId || "",
-                    tabData.typeFlag,
-                    window.location.href,
-                    (result) => {
-                        console.log(`✅ ${tabData.tabName} saved:`, result);
-                        resolve(result);
-                    },
-                    (error) => {
-                        console.warn(`⚠️ ${tabData.tabName} save error:`, error);
-                        // Don't reject, just resolve with false to continue
-                        resolve(false);
-                    }
-                );
-            } catch (error) {
-                console.error(`❌ Exception saving ${tabData.tabName}:`, error);
-                resolve(false);
-            }
-        });
-    }
-
-    async skipAssessmentInTab(tabId) {
-        try {
-            // Try to find and click assessment skip buttons
-            const skipSelectors = [
-                `#btnSkipAssessment${tabId}`,
-                `#btnSkip${tabId}`,
-                `[onclick*="SkipAssessment"][onclick*="${tabId}"]`,
-                `[onclick*="SkipQuestion"][onclick*="${tabId}"]`
-            ];
-
-            for (const selector of skipSelectors) {
-                const button = document.querySelector(selector);
-                if (button && !button.disabled) {
-                    console.log(`Clicking skip button: ${selector}`);
-                    button.click();
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                    break;
-                }
-            }
-        } catch (error) {
-            console.warn(`Could not skip assessment in tab ${tabId}:`, error);
-        }
-    }
-
-    extractLectureData() {
-        const studentId = document.getElementById("hfStudentID")?.value;
-        const courseCode = document.getElementById("hfCourseCode")?.value;
-        const lessonNo = document.getElementById("MainContent_lblLessonTitle")?.getAttribute("title")?.match(/Lesson\s*(\d+)/)?.[1];
-
-        // Get current tab info
-        const activeTabId = document.getElementById("hfActiveTab")?.value?.replace("tabHeader", "");
-        const contentId = document.getElementById(`hfContentID${activeTabId}`)?.value;
-        const videoId = document.getElementById(`hfVideoID${activeTabId}`)?.value;
-        const isVideo = document.getElementById(`hfIsVideo${activeTabId}`)?.value === "1";
-
-        return {
-            studentId,
-            courseCode,
-            lessonNo,
-            contentId,
-            videoId,
-            isVideo,
-            activeTabId
-        };
-    }
-
-    async saveVideoProgress(data) {
-        console.log("saveVideoProgress", data);
-        return new Promise((resolve, reject) => {
-            if (typeof PageMethods?.SaveStudentVideoLog === 'function') {
-                try {
-                    // VU LMS expects these parameters in this order:
-                    // 1. Student ID
-                    // 2. Course Code
-                    // 3. Semester (you're missing this)
-                    // 4. Lesson No
-                    // 5. Content ID
-                    // 6. Watched Duration
-                    // 7. Total Duration
-                    // 8. Video ID
-                    // 9. Type Flag (1 for video, -2 for assessment, 0 for reading)
-                    // 10. Page URL
-
-                    // Get semester from page
-                    const semester = document.getElementById("hfEnrollmentSemester")?.value || "";
-                    const enrollmentYear = document.getElementById("hfEnrollmentYear")?.value || "";
-                    const academicYear = document.getElementById("hfAcademicYear")?.value || "";
-
-                    // Use semester or combine year info
-                    const semesterInfo = semester || `${enrollmentYear}-${academicYear}`;
-
-                    // Determine type flag: 1 for video, -2 for assessment, 0 for reading
-                    const tabType = document.getElementById(`hfTabType${data.activeTabId}`)?.value || "";
-                    let typeFlag = data.isVideo ? 1 : 0;
-                    if (tabType.includes("formativeassessment") || tabType.includes("assessment")) {
-                        typeFlag = -2;
-                    }
-
-                    console.log("Calling PageMethods.SaveStudentVideoLog with:", {
-                        studentId: data.studentId,
-                        courseCode: data.courseCode,
-                        semester: semesterInfo,
-                        lessonNo: data.lessonNo,
-                        contentId: data.contentId,
-                        watchedDuration: 60,
-                        totalDuration: 60,
-                        videoId: data.videoId,
-                        typeFlag: typeFlag,
-                        pageUrl: window.location.href
-                    });
-
-                    PageMethods.SaveStudentVideoLog(
-                        data.studentId,
-                        data.courseCode,
-                        semesterInfo,
-                        data.lessonNo,
-                        data.contentId,
-                        60, // watched duration
-                        60, // total duration
-                        data.videoId,
-                        typeFlag,
-                        window.location.href,
-                        (result) => {
-                            console.log("SaveStudentVideoLog success:", result);
-                            this.updateTabStatus(data.activeTabId, 'Completed');
-                            resolve(result);
-                        },
-                        (error) => {
-                            console.error("SaveStudentVideoLog error:", error);
-                            reject(new Error(`Save failed: ${error}`));
-                        }
-                    );
-                } catch (error) {
-                    console.error("Error in saveVideoProgress:", error);
-                    reject(error);
-                }
-            } else {
-                console.error("PageMethods.SaveStudentVideoLog not available");
-                reject(new Error('PageMethods not available'));
-            }
-        });
-    }
-
-    updateTabStatus(tabId, status) {
-        console.log(`Updating tab ${tabId} status to: ${status}`);
-
-        try {
-            // Update hidden status field
             const statusElement = document.getElementById(`hfTabCompletionStatus${tabId}`);
             if (statusElement) {
-                statusElement.value = status;
+                statusElement.value = 'Completed';
             }
 
-            // Update video status indicator
             const videoStatus = document.getElementById(`lblVCompletionStatus${tabId}`);
             if (videoStatus) {
                 videoStatus.innerHTML = "<i class='fa fa-check text-success'></i> Viewed";
                 videoStatus.style.color = "green";
             }
 
-            // Update reading status indicator
             const readStatus = document.getElementById(`lblRCompletionStatus${tabId}`);
             if (readStatus) {
                 readStatus.innerHTML = "<i class='fa fa-check text-success'></i> Completed";
                 readStatus.style.color = "green";
-            }
-
-            // Update progress bar if exists
-            const progressBar = document.getElementById(`pBarVideo${tabId}`);
-            if (progressBar) {
-                progressBar // ==#TODO#==: Update progress bar if needed
-            }
-
-            // Enable tab navigation
-            const tabElement = document.getElementById(`liHeader${tabId}`);
-            if (tabElement) {
-                tabElement.classList.remove("disabled");
             }
 
             const tabLink = document.getElementById(`tabHeader${tabId}`);
@@ -842,451 +309,399 @@ class VULectureGenie {
             }
 
         } catch (error) {
-            console.error(`Error updating tab ${tabId} status:`, error);
+            console.warn(`Could not update tab ${tabId}:`, error);
         }
     }
 
-    randomDuration(min, max) {
-        return Math.floor(Math.random() * (max - min + 1) + min);
+    async saveAllTabsWith85Percent() {
+        console.log("Saving all tabs with 85% watched duration...");
+
+        if (typeof PageMethods?.SaveStudentVideoLog !== 'function') {
+            console.log("PageMethods not available");
+            return;
+        }
+
+        const allTabElements = document.querySelectorAll('a.nav-link[id^="tabHeader"]');
+        const tabDataArray = [];
+
+        // Collect all tab data
+        for (const tabElement of allTabElements) {
+            const tabId = tabElement.id.replace('tabHeader', '');
+            const data = this.extractTabDataWith85Percent(tabId);
+            if (data) {
+                tabDataArray.push(data);
+                console.log(`Tab ${tabId}: ${data.tabName} - ${data.totalDuration}s total, ${data.watchedDuration}s watched (${data.percentage}%)`);
+            }
+        }
+
+        console.log(`Found ${tabDataArray.length} tabs to save`);
+
+        // Save each tab with 85% watched duration
+        const savePromises = tabDataArray.map(tabData =>
+            this.saveTabWith85Percent(tabData)
+        );
+
+        // Wait for saves to complete
+        await Promise.allSettled(savePromises);
+
+        console.log("All save requests completed");
+    }
+
+    extractTabDataWith85Percent(tabId) {
+        try {
+            // Get required data for VU LMS
+            const studentId = document.getElementById("hfStudentID")?.value;
+            const courseCode = document.getElementById("hfCourseCode")?.value;
+            const semester = document.getElementById("hfEnrollmentSemester")?.value || "";
+            const lessonTitle = document.getElementById("MainContent_lblLessonTitle")?.getAttribute("title") || "";
+            const lessonNo = lessonTitle.match(/Lesson\s*(\d+)/)?.[1] || "1";
+
+            const contentId = document.getElementById(`hfContentID${tabId}`)?.value;
+            const videoId = document.getElementById(`hfVideoID${tabId}`)?.value || "";
+            const isVideo = document.getElementById(`hfIsVideo${tabId}`)?.value === "1";
+            const tabName = document.querySelector(`#tabHeader${tabId}`)?.textContent?.trim() || `Tab ${tabId}`;
+
+            // Get tab type for typeFlag
+            const tabType = document.getElementById(`hfTabType${tabId}`)?.value || "";
+            let typeFlag = 0; // Default reading
+
+            if (isVideo) {
+                typeFlag = 1; // Video
+            } else if (tabType.includes("formativeassessment") || tabType.includes("assessment")) {
+                typeFlag = -2; // Assessment
+            }
+
+            // Get durations with 85% watched for videos
+            let totalDuration = 0;
+            let watchedDuration = 0;
+            let percentage = 0;
+
+            if (typeFlag === 1) { // Video
+                totalDuration = this.getVideoDuration(tabId);
+
+                // Ensure minimum duration of 60 seconds
+                if (totalDuration < 60) totalDuration = 60;
+
+                // Calculate 85% watched duration
+                watchedDuration = Math.round(totalDuration * 0.85);
+                percentage = 85;
+
+                console.log(`Video ${tabId}: Total=${totalDuration}s, Watched=${watchedDuration}s (${percentage}%)`);
+
+            } else if (typeFlag === -2) { // Assessment
+                // Assessments: mark as 90% completed
+                totalDuration = 300; // 5 minutes total
+                watchedDuration = 270; // 4.5 minutes watched (90%)
+                percentage = 90;
+
+            } else { // Reading material
+                // Reading: mark as 95% completed
+                totalDuration = 240; // 4 minutes total
+                watchedDuration = 228; // 3.8 minutes watched (95%)
+                percentage = 95;
+            }
+
+            return {
+                tabId,
+                studentId,
+                courseCode,
+                semester,
+                lessonNo,
+                contentId,
+                videoId,
+                isVideo,
+                tabName,
+                typeFlag,
+                totalDuration,
+                watchedDuration,
+                percentage
+            };
+
+        } catch (error) {
+            console.error(`Error extracting data for tab ${tabId}:`, error);
+            return null;
+        }
+    }
+
+    async saveTabWith85Percent(tabData) {
+        return new Promise((resolve) => {
+            try {
+                console.log(`Saving tab ${tabData.tabId} with ${tabData.percentage}% watched...`);
+
+                // Set timeout
+                const timeout = setTimeout(() => {
+                    console.warn(`Timeout saving tab ${tabData.tabId}`);
+                    resolve(false);
+                }, 5000);
+
+                // Call VU LMS method with 85% watched duration
+                PageMethods.SaveStudentVideoLog(
+                    tabData.studentId,
+                    tabData.courseCode,
+                    tabData.semester,
+                    tabData.lessonNo,
+                    tabData.contentId,
+                    tabData.watchedDuration,
+                    tabData.totalDuration,
+                    tabData.videoId,
+                    tabData.typeFlag,
+                    window.location.href,
+                    (result) => {
+                        clearTimeout(timeout);
+                        console.log(`✅ Tab ${tabData.tabId} saved: ${tabData.watchedDuration}/${tabData.totalDuration}s (${tabData.percentage}%)`);
+                        resolve(true);
+                    },
+                    (error) => {
+                        clearTimeout(timeout);
+                        console.warn(`⚠️ Tab ${tabData.tabId} save error:`, error);
+                        resolve(false);
+                    }
+                );
+
+            } catch (error) {
+                console.warn(`Exception saving tab ${tabData.tabId}:`, error);
+                resolve(false);
+            }
+        });
     }
 
     getVideoDuration(tabId) {
         try {
-            // Check if video is available on YouTube
-            const isOnYoutube = document.getElementById(`hfIsAvailableOnYoutube${tabId}`)?.value === "True";
+            let duration = 0;
 
-            if (isOnYoutube) {
-                // YouTube player
-                if (typeof CurrentPlayer !== 'undefined' && CurrentPlayer.getDuration) {
-                    const duration = CurrentPlayer.getDuration();
-                    console.log(`YouTube video duration: ${duration} seconds`);
-                    return duration;
+            // SAFELY check YouTube player
+            try {
+                if (window.CurrentPlayer &&
+                    typeof window.CurrentPlayer === 'object' &&
+                    typeof window.CurrentPlayer.getDuration === 'function') {
+                    const playerDuration = window.CurrentPlayer.getDuration();
+                    if (playerDuration && playerDuration > 0) {
+                        duration = playerDuration;
+                        console.log(`✅ YouTube video duration: ${duration}s`);
+                    }
                 }
+            } catch (youtubeError) {
+                console.log("YouTube player not available or error:", youtubeError.message);
+            }
+
+            // SAFELY check VU video player
+            try {
+                if (window.CurrentLVPlayer &&
+                    typeof window.CurrentLVPlayer === 'object' &&
+                    window.CurrentLVPlayer.duration) {
+                    const vuDuration = window.CurrentLVPlayer.duration;
+                    if (vuDuration && vuDuration > 0) {
+                        duration = vuDuration;
+                        console.log(`✅ VU video duration: ${duration}s`);
+                    }
+                }
+            } catch (vuError) {
+                console.log("VU video player not available or error:", vuError.message);
+            }
+
+            // SAFELY check HTML5 video element
+            try {
+                const videoElement = document.querySelector('video');
+                if (videoElement &&
+                    videoElement.duration &&
+                    videoElement.duration > 0) {
+                    duration = videoElement.duration;
+                    console.log(`✅ HTML5 video duration: ${duration}s`);
+                }
+            } catch (html5Error) {
+                console.log("HTML5 video not available or error:", html5Error.message);
+            }
+
+            // Check for duration in hidden fields
+            try {
+                const durationField = document.getElementById(`hfVideoDuration${tabId}`);
+                if (durationField && durationField.value) {
+                    const parsed = parseFloat(durationField.value);
+                    if (parsed > 0) {
+                        duration = parsed;
+                        console.log(`✅ Video duration from hidden field: ${duration}s`);
+                    }
+                }
+            } catch (fieldError) {
+                console.log("Duration field not available or error:", fieldError.message);
+            }
+
+            // If still no duration detected, use intelligent defaults
+            if (duration <= 0) {
+                duration = this.estimateDurationFromTabName(tabId);
+                console.log(`📊 Estimated duration from tab name: ${duration}s`);
+            }
+
+            return Math.max(duration, 60); // Minimum 60 seconds
+
+        } catch (error) {
+            console.warn(`⚠️ Error in getVideoDuration for tab ${tabId}:`, error.message);
+            return 600; // Default 10 minutes (safer default)
+        }
+    }
+
+    estimateDurationFromTabName(tabId) {
+        try {
+            const tabName = document.querySelector(`#tabHeader${tabId}`)?.textContent?.toLowerCase() || '';
+
+            // Duration estimation logic (in seconds)
+            if (tabName.includes('intro') || tabName.includes('overview') || tabName.includes('welcome')) {
+                return 180; // 3 minutes
+            } else if (tabName.includes('summary') || tabName.includes('conclusion') || tabName.includes('recap')) {
+                return 240; // 4 minutes
+            } else if (tabName.includes('part 1') || tabName.includes('lecture 1') || tabName.includes('section 1')) {
+                return 900; // 15 minutes
+            } else if (tabName.includes('part 2') || tabName.includes('lecture 2') || tabName.includes('section 2')) {
+                return 900; // 15 minutes
+            } else if (tabName.includes('part 3') || tabName.includes('lecture 3') || tabName.includes('section 3')) {
+                return 900; // 15 minutes
+            } else if (tabName.includes('full') || tabName.includes('complete') || tabName.includes('entire')) {
+                return 1800; // 30 minutes
+            } else if (tabName.includes('video') || tabName.includes('lecture') || tabName.includes('topic')) {
+                return 1200; // 20 minutes
+            } else if (tabName.includes('short') || tabName.includes('brief') || tabName.includes('quick')) {
+                return 300; // 5 minutes
             } else {
-                // VU's own video player
-                if (typeof CurrentLVPlayer !== 'undefined' && CurrentLVPlayer.duration) {
-                    const duration = CurrentLVPlayer.duration;
-                    console.log(`VU video duration: ${duration} seconds`);
-                    return duration;
-                }
+                return 600; // Default 10 minutes
             }
-
-            // Fallback: try to get from video element
-            const videoElement = document.querySelector('video');
-            if (videoElement && videoElement.duration && videoElement.duration > 0) {
-                console.log(`HTML5 video duration: ${videoElement.duration} seconds`);
-                return videoElement.duration;
-            }
-
-            // Last resort: get from data attributes or estimate
-            const durationAttr = document.querySelector(`[data-duration="${tabId}"]`)?.getAttribute('data-duration');
-            if (durationAttr) {
-                return parseFloat(durationAttr);
-            }
-
-            console.log(`Could not determine video duration for tab ${tabId}, using default`);
-            return 300; // Default 5 minutes
-
         } catch (error) {
-            console.error(`Error getting video duration for tab ${tabId}:`, error);
-            return 300; // Default 5 minutes
+            console.warn(`Could not estimate duration for tab ${tabId}:`, error);
+            return 600; // Default 10 minutes
         }
     }
 
-    calculateWatchedDuration(totalDuration, tabId) {
-        try {
-            // For videos, watch between 1/3 and 2/3 of the video. For reading/assessment, use shorter durations
+    async triggerCompletionAndNavigate() {
+        console.log("Triggering completion...");
 
-            const isVideo = document.getElementById(`hfIsVideo${tabId}`)?.value === "1";
-            const tabType = document.getElementById(`hfTabType${tabId}`)?.value || "";
+        // Try to trigger lesson completion
+        this.triggerCompletion();
 
-            if (isVideo) {
-                // For videos: watch between 1/3 and 2/3 of the video
-                const minWatched = Math.floor(totalDuration / 3);
-                const maxWatched = Math.floor(totalDuration * 2 / 3);
-                const watched = this.randomDuration(minWatched, maxWatched);
+        // Wait a moment for completion to register
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
-                console.log(`Video tab ${tabId}: total=${totalDuration}s, watched=${watched}s (${Math.round(watched / totalDuration * 100)}%)`);
-                return watched;
+        // Try to navigate
+        const success = await this.tryNavigateToNext();
 
-            } else if (tabType.includes("formativeassessment") || tabType.includes("assessment")) {
-                // For assessments: between 30-120 seconds
-                return this.randomDuration(30, 120);
-
-            } else {
-                // For reading content: between 10-60 seconds
-                return this.randomDuration(10, 60);
-            }
-
-        } catch (error) {
-            console.error(`Error calculating watched duration for tab ${tabId}:`, error);
-            return 60; // Default 1 minute
+        if (!success) {
+            this.enableNextButton();
+            this.showNotification('✅ Lecture marked as 85% completed. Click "Next" to continue.', 'success');
         }
+
+        return success;
     }
 
-    async markReadingContent() {
-        // Mark all reading content tabs as completed
-        const readingTabs = Array.from(document.querySelectorAll('a.nav-link[id^="tabHeader"]'))
-            .filter(tab => {
-                const tabId = tab.id.replace('tabHeader', '');
-                const isVideo = document.getElementById(`hfIsVideo${tabId}`)?.value === "1";
-                return !isVideo;
-            });
-        console.log("readingTabs", readingTabs);
-        for (const tab of readingTabs) {
-            const tabId = tab.id.replace('tabHeader', '');
-            const readStatus = document.getElementById(`lblRCompletionStatus${tabId}`);
-            // this.updateTabStatus(tabId, 'Completed');
-            console.log("readStatus", readStatus);
-            if (readStatus) {
-                readStatus.innerHTML = "<i class='fa fa-check text-success'></i> Completed";
-            }
-        }
-    }
-
-    async safeNavigateToNext() {
-        try {
-            console.log("Checking if navigation is safe...");
-
-            // First, check if lesson is actually completed
-            const isCompleted = await this.verifyLessonCompletion();
-
-            if (!isCompleted) {
-                this.showNotification('⚠️ Lesson not fully completed. Please wait or refresh.', 'warning');
-                return false;
-            }
-
-            // Check if next button exists and is enabled
-            const nextButton = document.querySelector('#lbtnNextLesson');
-
-            if (!nextButton) {
-                this.showNotification('Next lecture button not found', 'warning');
-                return false;
-            }
-
-            if (nextButton.disabled || nextButton.classList.contains('disabled')) {
-                // Check completion status
-                const allTabs = document.querySelectorAll('a.nav-link[id^="tabHeader"]');
-                let completedTabs = 0;
-
-                for (const tab of allTabs) {
-                    const tabId = tab.id.replace('tabHeader', '');
-                    const status = document.getElementById(`hfTabCompletionStatus${tabId}`)?.value;
-                    if (status === 'Completed') completedTabs++;
-                }
-
-                console.log(`${completedTabs}/${allTabs.length} tabs marked as completed`);
-
-                if (completedTabs === allTabs.length) {
-                    // All tabs are marked completed, so lesson should be complete
-                    // Try to enable the button
-                    nextButton.disabled = false;
-                    nextButton.classList.remove('disabled');
-
-                    // Wait a moment for UI to update
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                } else {
-                    this.showNotification(`Complete all ${allTabs.length} tabs first (${completedTabs} done)`, 'warning');
-                    return false;
-                }
-            }
-
-            // Now attempt navigation
-            return await this.attemptNavigation(nextButton);
-
-        } catch (error) {
-            console.error("Error in safeNavigateToNext:", error);
-            this.showNotification(`Navigation error: ${error.message}`, 'error');
-            return false;
-        }
-    }
-
-    async verifyLessonCompletion() {
-        try {
-            // Check if all tabs are marked as completed in the UI
-            const allTabElements = document.querySelectorAll('a.nav-link[id^="tabHeader"]');
-
-            for (const tabElement of allTabElements) {
-                const tabId = tabElement.id.replace('tabHeader', '');
-
-                // Check both hidden status and visual status
-                const hiddenStatus = document.getElementById(`hfTabCompletionStatus${tabId}`)?.value;
-                const videoStatus = document.getElementById(`lblVCompletionStatus${tabId}`);
-                const readStatus = document.getElementById(`lblRCompletionStatus${tabId}`);
-
-                // If any tab is not marked as completed, return false
-                if (hiddenStatus !== 'Completed' &&
-                    !videoStatus?.innerHTML.includes('fa-check') &&
-                    !readStatus?.innerHTML.includes('fa-check')) {
-                    console.log(`Tab ${tabId} not completed`);
-                    return false;
-                }
-            }
-
-            return true;
-        } catch (error) {
-            console.error("Error verifying completion:", error);
-            return false;
-        }
-    }
-
-    async attemptNavigation(nextButton) {
-        try {
-            console.log("Attempting navigation...");
-
-            // Store current URL
-            const currentUrl = window.location.href;
-
-            // Method 1: Standard click
-            if (nextButton.click) {
-                nextButton.click();
-                await new Promise(resolve => setTimeout(resolve, 2000));
-            }
-
-            // Check if navigation occurred
-            if (window.location.href !== currentUrl) {
-                console.log("✅ Navigation successful via click");
-                this.showNotification('Moving to next lecture...', 'success');
-                return true;
-            }
-
-            // Method 2: If button has href, use it directly
-            if (nextButton.href) {
-                console.log("Using href navigation");
-                window.location.href = nextButton.href;
-                return true;
-            }
-
-            // Method 3: Try AJAX navigation if available
-            if (typeof __doPostBack === 'function') {
-                console.log("Trying __doPostBack");
-                __doPostBack('lbtnNextLesson', '');
-                await new Promise(resolve => setTimeout(resolve, 3000));
-
-                if (window.location.href !== currentUrl) {
-                    console.log("✅ Navigation successful via __doPostBack");
+    triggerCompletion() {
+        // Try completion methods
+        const methods = [
+            () => {
+                const btn = document.querySelector('#btnComplete, #btnMarkComplete, #btnFinish');
+                if (btn && !btn.disabled) {
+                    btn.click();
+                    console.log("Clicked completion button");
                     return true;
                 }
-            }
+                return false;
+            },
 
-            console.log("❌ All navigation methods failed");
-            this.showNotification('Navigation failed. Please click Next manually.', 'error');
-            return false;
-
-        } catch (error) {
-            console.error("Error in attemptNavigation:", error);
-            return false;
-        }
-    }
-
-    async goToNextLecture() {
-        try {
-            console.log("Attempting to navigate to next lecture...");
-
-            const nextButton = document.querySelector('#lbtnNextLesson');
-
-            if (!nextButton) {
-                console.log("Next lecture button not found");
-                this.showNotification('Next lecture button not found', 'warning');
+            () => {
+                if (typeof UpdateTabStatus === 'function') {
+                    try {
+                        UpdateTabStatus("Completed", "0", "-2");
+                        console.log("Called UpdateTabStatus");
+                        return true;
+                    } catch (e) {
+                        return false;
+                    }
+                }
                 return false;
             }
-
-            if (nextButton.disabled || nextButton.classList.contains('disabled')) {
-                console.log("Next lecture button is disabled");
-
-                // Check why it's disabled
-                const lessonStatus = document.querySelector('#hfLessonStatus')?.value;
-                const completionStatus = document.querySelector('#hfCompletionStatus')?.value;
-
-                console.log("Lesson status:", lessonStatus);
-                console.log("Completion status:", completionStatus);
-
-                // Try to force enable it
-                nextButton.disabled = false;
-                nextButton.classList.remove('disabled');
-
-                // Check if it's still disabled
-                if (nextButton.disabled) {
-                    this.showNotification('Complete current lesson requirements first', 'warning');
-                    return false;
-                }
-            }
-
-            console.log("Clicking next lecture button...");
-
-            // Store current URL before navigation
-            const currentUrl = window.location.href;
-
-            // Multiple click methods to ensure it works
-            const clickMethods = [
-                () => { if (nextButton.click) nextButton.click(); },
-                () => { if (nextButton.onclick) nextButton.onclick(); },
-                () => {
-                    const event = new MouseEvent('click', {
-                        bubbles: true,
-                        cancelable: true,
-                        view: window
-                    });
-                    nextButton.dispatchEvent(event);
-                }
-            ];
-
-            // Try all click methods
-            for (const clickMethod of clickMethods) {
-                try {
-                    clickMethod();
-                    await new Promise(resolve => setTimeout(resolve, 100));
-
-                    // Check if navigation occurred
-                    if (window.location.href !== currentUrl) {
-                        console.log("✅ Navigation successful");
-                        return true;
-                    }
-                } catch (error) {
-                    console.warn("Click method failed:", error);
-                }
-            }
-
-            // If still on same page, try direct href navigation
-            if (nextButton.href && window.location.href === currentUrl) {
-                console.log("Using href navigation:", nextButton.href);
-                window.location.href = nextButton.href;
-                return true;
-            }
-
-            console.log("❌ Navigation failed");
-            this.showNotification('Could not navigate to next lecture', 'error');
-            return false;
-
-        } catch (error) {
-            console.error("Error in goToNextLecture:", error);
-            this.showNotification(`Navigation error: ${error.message}`, 'error');
-            return false;
-        }
-    }
-
-    async waitForNavigation(timeout = 10000) {
-        return new Promise((resolve) => {
-            const startUrl = window.location.href;
-            const startTime = Date.now();
-
-            // Check every 100ms if URL changed
-            const interval = setInterval(() => {
-                if (window.location.href !== startUrl) {
-                    clearInterval(interval);
-                    resolve(true);
-                } else if (Date.now() - startTime > timeout) {
-                    clearInterval(interval);
-                    resolve(false);
-                }
-            }, 100);
-        });
-    }
-
-    // GDB Methods
-    enableCopyPaste() {
-        // Remove copy/paste restrictions
-        document.addEventListener('copy', e => e.stopPropagation(), true);
-        document.addEventListener('paste', e => e.stopPropagation(), true);
-        document.addEventListener('cut', e => e.stopPropagation(), true);
-
-        // Enable CKEDITOR editing
-        const editorFrames = document.querySelectorAll('iframe[title*="editor"]');
-        editorFrames.forEach(frame => {
-            try {
-                const doc = frame.contentDocument || frame.contentWindow.document;
-                doc.designMode = 'on';
-                doc.body.contentEditable = true;
-            } catch (error) {
-                console.warn('Could not enable editor:', error);
-            }
-        });
-
-        this.showNotification('📝 Copy/Paste enabled!', 'success');
-    }
-
-    extractGDBQuestion() {
-        const selectors = [
-            '#MainContent_divDescription',
-            '#lblQuestion',
-            '.question-text',
-            '[id*="Question"]'
         ];
 
-        for (const selector of selectors) {
-            const element = document.querySelector(selector);
-            if (element && element.textContent.trim().length > 20) {
-                return element.textContent.trim();
-            }
-        }
-
-        return '';
-    }
-
-    async getAIResponse(content, type, apiKey) {
-        const prompt = type === 'gdb' ?
-            `You are a Virtual University expert. Write a comprehensive answer for this GDB question:\n\n${content}\n\nFormat with proper paragraphs, bullet points where needed, and academic tone.` :
-            `Analyze this quiz question and provide the correct answer with explanation:\n\n${content}`;
-        console.log("prompt:", prompt)
-        // Using fetch to call AI API
-        const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-            {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    contents: [
-                        {
-                            parts: [{ text: prompt }],
-                        },
-                    ],
-                    generationConfig: {
-                        temperature: 0.2,
-                        topK: 1,
-                        topP: 1,
-                        maxOutputTokens: 2048,
-                    },
-                }),
-            }
-        );
-
-        if (!response.ok) throw new Error('AI service error');
-
-        const data = await response.json();
-        return data.response || data.choices?.[0]?.text;
-    }
-
-    async fillGDBAnswer(answer) {
-        const editorFrame = document.querySelector('iframe[title*="editor"]');
-        if (editorFrame) {
+        for (const method of methods) {
             try {
-                const doc = editorFrame.contentDocument || editorFrame.contentWindow.document;
-                doc.body.innerHTML = this.formatAnswerHTML(answer);
-                this.showNotification('✅ Answer filled in editor', 'success');
+                if (method()) break;
             } catch (error) {
-                this.showNotification('Could not fill editor, copying to clipboard', 'warning');
-                await navigator.clipboard.writeText(answer);
-            }
-        } else {
-            // Try textarea fallback
-            const textarea = document.querySelector('textarea');
-            if (textarea) {
-                textarea.value = answer;
-                this.showNotification('✅ Answer filled', 'success');
+                continue;
             }
         }
     }
 
-    formatAnswerHTML(text) {
-        // Convert markdown-like text to HTML
-        return text
-            .replace(/^# (.*$)/gm, '<h3>$1</h3>')
-            .replace(/^## (.*$)/gm, '<h4>$1</h4>')
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            .replace(/\*(.*?)\*/g, '<em>$1</em>')
-            .replace(/^\* (.*$)/gm, '<li>$1</li>')
-            .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>')
-            .replace(/\n\n/g, '<br><br>');
+    async tryNavigateToNext() {
+        console.log("Attempting navigation...");
+
+        const nextButton = document.querySelector('#lbtnNextLesson');
+        if (!nextButton) {
+            console.log("Next button not found");
+            return false;
+        }
+
+        // Enable if disabled
+        if (nextButton.disabled) {
+            nextButton.disabled = false;
+            nextButton.classList.remove('disabled');
+        }
+
+        const currentUrl = window.location.href;
+
+        // Try click
+        if (nextButton.click) {
+            nextButton.click();
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            if (window.location.href !== currentUrl) {
+                console.log("Navigation successful via click");
+                return true;
+            }
+        }
+
+        // Try href
+        if (nextButton.href && window.location.href === currentUrl) {
+            window.location.href = nextButton.href;
+            return true;
+        }
+
+        return false;
+    }
+
+    enableNextButton() {
+        const nextButton = document.querySelector('#lbtnNextLesson');
+        if (nextButton && nextButton.disabled) {
+            nextButton.disabled = false;
+            nextButton.classList.remove('disabled');
+            console.log("Enabled Next button");
+        }
+    }
+
+    async autoSkipLectures() {
+        try {
+            this.settings.autoSkipLecture = !this.settings.autoSkipLecture;
+
+            // Save setting
+            try {
+                const savedSettings = localStorage.getItem('vuGenie_settings');
+                let settings = savedSettings ? JSON.parse(savedSettings) : {};
+                settings.autoSkipAllLectures = this.settings.autoSkipLecture;
+                localStorage.setItem('vuGenie_settings', JSON.stringify(settings));
+            } catch (error) {
+                console.error('Error saving to localStorage:', error);
+            }
+
+            // Update UI
+            this.updateStatus(this.settings.autoSkipLecture ?
+                'Auto-skip enabled. Skipping lectures...' :
+                'Auto-skip disabled');
+
+            // If enabled, skip current lecture
+            if (this.settings.autoSkipLecture) {
+                await this.skipLecture();
+            } else {
+                this.showNotification('Auto-skip lectures disabled', 'info');
+            }
+
+        } catch (error) {
+            console.error("Error in autoSkipLectures:", error);
+            this.showNotification(`❌ Error: ${error.message}`, 'error');
+        }
     }
 
     showNotification(message, type = 'info') {
@@ -1312,7 +727,6 @@ class VULectureGenie {
             setTimeout(() => notification.remove(), 300);
         }, 3000);
 
-        // Add animation styles
         if (!document.querySelector('#notification-styles')) {
             const style = document.createElement('style');
             style.id = 'notification-styles';
@@ -1329,7 +743,6 @@ class VULectureGenie {
             document.head.appendChild(style);
         }
     }
-
 }
 
 // Initialize only if on lecture page

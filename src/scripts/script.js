@@ -19,13 +19,45 @@ async function initPopup() {
         // Load and initialize settings
         await initSettingsUI();
 
-        // Initialize quota display
-        await initQuotaDisplay();
+        // Initialize API status
+        await initApiStatus();
 
         console.log('Popup initialized successfully');
     } catch (error) {
         console.error('Error initializing popup:', error);
         showStatus('Error initializing: ' + error.message, 'error');
+    }
+}
+
+async function initApiStatus() {
+    try {
+        // Show loading
+        const loading = document.getElementById('api-status-loading');
+        const message = document.getElementById('api-status-message');
+
+        if (loading && message) {
+            loading.style.display = 'block';
+
+            // Check if API key is set
+            const settings = settingsManager.getAll();
+            const apiKey = settings.apiKey;
+
+            // Hide loading, show message
+            setTimeout(() => {
+                loading.style.display = 'none';
+                message.style.display = 'block';
+
+                if (!apiKey) {
+                    message.innerHTML = '<span class="status-icon">❌</span><span class="status-text">API key not set</span>';
+                    message.style.color = '#ef4444';
+                } else {
+                    message.innerHTML = '<span class="status-icon">✅</span><span class="status-text">API ready</span>';
+                    message.style.color = '#10b981';
+                }
+            }, 500);
+        }
+    } catch (error) {
+        console.error('Error checking API status:', error);
     }
 }
 
@@ -43,9 +75,6 @@ async function initSettingsUI() {
         document.getElementById('showSolution').checked = settings.showSolution !== false;
         document.getElementById('autoSolve').checked = settings.autoSolve === true;
         document.getElementById('autoSaveAfterSolve').checked = settings.autoSaveAfterSolve === true;
-
-        // Update API key status
-        updateApiKeyStatus(settings.apiKey);
 
         // Add listener for settings changes
         settingsManager.addListener(updateSettingsUI);
@@ -77,306 +106,19 @@ async function initQuotaDisplay() {
         const settings = await chrome.storage.sync.get(['quotaData', 'lastQuotaUpdate']);
 
         if (settings.quotaData && settings.lastQuotaUpdate) {
-            displayQuotaData(settings.quotaData, settings.lastQuotaUpdate);
         } else {
             // Fetch fresh quota data
-            await fetchAndDisplayQuota();
+            
         }
 
         // Add refresh button listener
-        document.getElementById('refresh-quota').addEventListener('click', async () => {
-            await refreshQuota();
-        });
+        
 
     } catch (error) {
         console.error('Error initializing quota display:', error);
-        showQuotaError('Failed to load quota data');
     }
 }
 
-async function refreshQuota() {
-    const refreshBtn = document.getElementById('refresh-quota');
-    const originalText = refreshBtn.textContent;
-
-    refreshBtn.disabled = true;
-    refreshBtn.textContent = 'Refreshing...';
-
-    try {
-        await fetchAndDisplayQuota();
-    } catch (error) {
-        console.error('Error refreshing quota:', error);
-        showQuotaError('Failed to refresh quota');
-    } finally {
-        refreshBtn.disabled = false;
-        refreshBtn.textContent = originalText;
-    }
-}
-
-async function fetchAndDisplayQuota() {
-    const loadingElement = document.getElementById('quota-loading');
-
-    // Show loading
-    if (loadingElement) loadingElement.style.display = 'block';
-
-    try {
-        // Get API key first
-        const settings = await chrome.storage.sync.get(['apiKey']);
-        const apiKey = settings.apiKey;
-
-        if (!apiKey) {
-            showQuotaError('API key not set');
-            return;
-        }
-
-        // Fetch quota information
-        const quotaData = await getGeminiQuota(apiKey);
-
-        // Save quota data
-        const lastQuotaUpdate = new Date().toISOString();
-        await chrome.storage.sync.set({
-            quotaData: quotaData,
-            lastQuotaUpdate: lastQuotaUpdate
-        });
-
-        // Display quota data
-        displayQuotaData(quotaData, lastQuotaUpdate);
-
-    } catch (error) {
-        console.error('Error fetching quota:', error);
-        showQuotaError('Failed to fetch quota information');
-    } finally {
-        if (loadingElement) loadingElement.style.display = 'none';
-    }
-}
-
-async function getGeminiQuota(apiKey) {
-    try {
-        // Check API key validity by making a simple models request
-        const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-            {
-
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            }
-        );
-
-        if (!response.ok) {
-            throw new Error(`API Key Error: ${response.status}`);
-        }
-
-        // Get usage data from local storage
-        const usageData = await chrome.storage.local.get(['apiUsage']);
-        const usage = usageData.apiUsage || {
-            totalRequests: 0,
-            totalCharacters: 0,
-            dailyRequests: {},
-            lastUpdated: null
-        };
-
-        const today = new Date().toDateString();
-        const todayUsage = usage.dailyRequests[today] || { requests: 0, characters: 0 };
-
-        // Gemini free tier limits (adjust based on actual limits)
-        const dailyRequestLimit = 60; // 60 requests per day for free tier
-        const dailyCharacterLimit = 60000; // ~60K characters per day
-        const minuteLimit = 15; // 15 requests per minute
-
-        // Calculate minute usage (this is approximate)
-        const minuteUsage = Math.floor(Math.random() * 5); // Mock data - in production, track this properly
-
-        return {
-            requestsPerDay: {
-                used: todayUsage.requests,
-                limit: dailyRequestLimit
-            },
-            charactersPerDay: {
-                used: todayUsage.characters,
-                limit: dailyCharacterLimit
-            },
-            requestsPerMinute: {
-                used: minuteUsage,
-                limit: minuteLimit
-            },
-            totalRequests: usage.totalRequests,
-            totalCharacters: usage.totalCharacters,
-            lastReset: getStartOfDay(),
-            nextReset: getEndOfDay()
-        };
-
-    } catch (error) {
-        console.error('Error checking Gemini quota:', error);
-        throw error;
-    }
-}
-
-function displayQuotaData(quotaData, lastUpdated) {
-    const quotaContainer = document.getElementById('quota-container');
-    const lastUpdatedElement = document.getElementById('last-updated');
-
-    if (!quotaContainer) return;
-
-    // Format last updated time
-    if (lastUpdatedElement && lastUpdated) {
-        const timeAgo = getTimeAgo(new Date(lastUpdated));
-        lastUpdatedElement.textContent = `Last updated: ${timeAgo}`;
-    }
-
-    // Create quota display HTML
-    let html = '';
-
-    // Daily Requests
-    const requestPercent = (quotaData.requestsPerDay.used / quotaData.requestsPerDay.limit) * 100;
-    const requestFillClass = getFillClass(requestPercent);
-
-    html += `
-        <div class="quota-item">
-            <div class="quota-header">
-                <div class="quota-label">
-                    <span>📊</span> Daily Requests
-                </div>
-                <div class="quota-value">
-                    ${quotaData.requestsPerDay.used}/${quotaData.requestsPerDay.limit}
-                </div>
-            </div>
-            <div class="quota-bar">
-                <div class="quota-fill ${requestFillClass}" style="width: ${Math.min(requestPercent, 100)}%"></div>
-            </div>
-            <div class="usage-info">
-                <span class="usage-percent">${Math.round(requestPercent)}% used</span>
-                <span class="usage-limit">Resets in ${getTimeUntilReset(quotaData.nextReset)}</span>
-            </div>
-        </div>
-    `;
-
-    // Daily Characters
-    const charPercent = (quotaData.charactersPerDay.used / quotaData.charactersPerDay.limit) * 100;
-    const charFillClass = getFillClass(charPercent);
-
-    html += `
-        <div class="quota-item">
-            <div class="quota-header">
-                <div class="quota-label">
-                    <span>📝</span> Daily Characters
-                </div>
-                <div class="quota-value">
-                    ${formatNumber(quotaData.charactersPerDay.used)}/${formatNumber(quotaData.charactersPerDay.limit)}
-                </div>
-            </div>
-            <div class="quota-bar">
-                <div class="quota-fill ${charFillClass}" style="width: ${Math.min(charPercent, 100)}%"></div>
-            </div>
-            <div class="usage-info">
-                <span class="usage-percent">${Math.round(charPercent)}% used</span>
-                <span class="usage-limit">~${formatNumber(quotaData.charactersPerDay.limit - quotaData.charactersPerDay.used)} remaining</span>
-            </div>
-        </div>
-    `;
-
-    // Per Minute Requests
-    const minutePercent = (quotaData.requestsPerMinute.used / quotaData.requestsPerMinute.limit) * 100;
-    const minuteFillClass = getFillClass(minutePercent);
-
-    html += `
-        <div class="quota-item">
-            <div class="quota-header">
-                <div class="quota-label">
-                    <span>⚡</span> Requests/Minute
-                </div>
-                <div class="quota-value">
-                    ${quotaData.requestsPerMinute.used}/${quotaData.requestsPerMinute.limit}
-                </div>
-            </div>
-            <div class="quota-bar">
-                <div class="quota-fill ${minuteFillClass}" style="width: ${Math.min(minutePercent, 100)}%"></div>
-            </div>
-            <div class="usage-info">
-                <span class="usage-percent">${Math.round(minutePercent)}% used</span>
-                <span class="usage-limit">Resets every minute</span>
-            </div>
-        </div>
-    `;
-
-    // Total Usage Summary
-    html += `
-        <div class="quota-item" style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px; margin-top: 10px;">
-            <div style="font-size: 10px; opacity: 0.7; text-align: center;">
-                Total: ${quotaData.totalRequests} requests • ${formatNumber(quotaData.totalCharacters)} chars
-            </div>
-        </div>
-    `;
-
-    quotaContainer.innerHTML = html;
-}
-
-function getFillClass(percent) {
-    if (percent >= 90) return 'danger';
-    if (percent >= 75) return 'warning';
-    return 'safe';
-}
-
-function formatNumber(num) {
-    if (num >= 1000000) {
-        return (num / 1000000).toFixed(1) + 'M';
-    }
-    if (num >= 1000) {
-        return (num / 1000).toFixed(1) + 'K';
-    }
-    return num.toString();
-}
-
-function getTimeAgo(date) {
-    const seconds = Math.floor((new Date() - date) / 1000);
-
-    if (seconds < 60) return 'just now';
-
-    const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return minutes + ' min ago';
-
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return hours + ' hour' + (hours > 1 ? 's' : '') + ' ago';
-
-    const days = Math.floor(hours / 24);
-    return days + ' day' + (days > 1 ? 's' : '') + ' ago';
-}
-
-function getTimeUntilReset(nextReset) {
-    const resetTime = new Date(nextReset);
-    const now = new Date();
-    const diffMs = resetTime - now;
-
-    if (diffMs <= 0) return 'soon';
-
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-
-    return `${diffHours}h ${diffMinutes}m`;
-}
-
-function getStartOfDay() {
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    return now.toISOString();
-}
-
-function getEndOfDay() {
-    const now = new Date();
-    now.setHours(23, 59, 59, 999);
-    return now.toISOString();
-}
-
-function showQuotaError(message) {
-    const quotaContainer = document.getElementById('quota-container');
-    if (!quotaContainer) return;
-
-    quotaContainer.innerHTML = `
-        <div class="error-message">
-            ${message}
-        </div>
-    `;
-}
 
 async function showPageActions(url, tabId) {
     const actionContainer = document.getElementById('page-actions');
@@ -438,13 +180,6 @@ async function showPageActions(url, tabId) {
             executeOnTab(tabId, 'solveGDBWithAI');
         });
 
-    } else {
-        actionContainer.innerHTML = `
-            <div style="text-align: center; padding: 20px; background: rgba(255,255,255,0.1); border-radius: 12px;">
-                <div style="font-size: 36px; margin-bottom: 10px;">🎯</div>
-                <div style="font-size: 14px; opacity: 0.8;">Open a lecture, quiz, or GDB page for specific actions</div>
-            </div>
-        `;
     }
 }
 
@@ -490,9 +225,6 @@ async function initSettings() {
         document.getElementById('autoSolve').checked = settings.autoSolve === true;
         document.getElementById('autoSaveAfterSolve').checked = settings.autoSaveAfterSolve === true;
 
-        // Update API key status
-        updateApiKeyStatus(settings.apiKey);
-
         // Add listener for settings changes
         settingsManager.addListener(updateSettingsUI);
 
@@ -517,24 +249,6 @@ function updateSettingsUI(settings) {
     document.getElementById('showSolution').checked = settings.showSolution !== false;
     document.getElementById('autoSolve').checked = settings.autoSolve === true;
     document.getElementById('autoSaveAfterSolve').checked = settings.autoSaveAfterSolve === true;
-
-    // Update API key status
-    updateApiKeyStatus(settings.apiKey);
-}
-
-function updateApiKeyStatus(apiKey) {
-    const statusElement = document.getElementById('api-key-status');
-    if (!statusElement) return;
-
-    if (apiKey && apiKey.length > 10) {
-        // Mask the API key for display
-        const maskedKey = apiKey.substring(0, 4) + '...' + apiKey.substring(apiKey.length - 4);
-        statusElement.textContent = `✅ API Key: ${maskedKey}`;
-        statusElement.className = 'api-key-status valid';
-    } else {
-        statusElement.textContent = '❌ API Key not set';
-        statusElement.className = 'api-key-status invalid';
-    }
 }
 
 async function saveSettings() {
@@ -563,6 +277,9 @@ async function saveSettings() {
 
         if (success) {
             showStatus('✅ Settings saved successfully!', 'success');
+
+            // Refresh API status
+            await initApiStatus();
 
             // Clear success message after 3 seconds
             setTimeout(() => {
