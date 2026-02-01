@@ -1,0 +1,183 @@
+.demo-box {
+    max-width: 600px;
+    margin-bottom: 30px;
+}
+
+/* ============================= */
+/* 1. Classic Shimmer */
+/* ============================= */
+.placeholder {
+    position: relative;
+    overflow: hidden;
+    background: #2b2b2b;
+    border-radius: 8px;
+    height: 30px;
+}
+
+.placeholder::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg,
+            transparent,
+            rgba(255, 255, 255, 0.3),
+            transparent);
+    transform: translateX(-100%);
+    animation: shimmer 1.2s infinite;
+}
+
+@keyframes shimmer {
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+/* ============================= */
+/* 2. Pulse */
+/* ============================= */
+.placeholder-pulse {
+    height: 30px;
+    border-radius: 8px;
+    background: #333;
+    animation: pulse 1.2s infinite ease-in-out;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 0.5;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0.5;
+    }
+}
+
+/* ============================= */
+/* 3. Wave */
+/* ============================= */
+.placeholder-wave {
+    position: relative;
+    overflow: hidden;
+    height: 30px;
+    border-radius: 8px;
+    background: #2f2f2f;
+}
+
+.placeholder-wave::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(110deg,
+            transparent 25%,
+            rgba(255, 255, 255, 0.35) 37%,
+            transparent 63%);
+    animation: wave 1.4s infinite;
+}
+
+@keyframes wave {
+    from {
+        transform: translateX(-100%);
+    }
+
+    to {
+        transform: translateX(100%);
+    }
+}
+
+/* ============================= */
+/* 4. Stripes */
+/* ============================= */
+.placeholder-stripes {
+    height: 30px;
+    border-radius: 8px;
+    background: repeating-linear-gradient(45deg,
+            #2b2b2b,
+            #2b2b2b 10px,
+            #3a3a3a 10px,
+            #3a3a3a 20px);
+    animation: stripes 1s linear infinite;
+}
+
+@keyframes stripes {
+    from {
+        background-position: 0 0;
+    }
+
+    to {
+        background-position: 40px 40px;
+    }
+}
+
+/* ============================= */
+/* 5. Skeleton Text */
+/* ============================= */
+.skeleton-line {
+    height: 14px;
+    border-radius: 6px;
+    background: #2e2e2e;
+    margin-bottom: 10px;
+    position: relative;
+    overflow: hidden;
+}
+
+.skeleton-line::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg,
+            transparent,
+            rgba(255, 255, 255, 0.25),
+            transparent);
+    animation: shimmer 1.3s infinite;
+}
+
+/* ============================= */
+/* 6. Card Skeleton */
+/* ============================= */
+.skeleton-card {
+    width: 300px;
+}
+
+.skeleton-img {
+    height: 150px;
+    border-radius: 12px;
+    background: #2c2c2c;
+    margin-bottom: 12px;
+    animation: pulse 1.2s infinite;
+}
+
+.skeleton-text {
+    height: 14px;
+    border-radius: 6px;
+    background: #333;
+    margin-bottom: 8px;
+    animation: pulse 1.2s infinite;
+}
+
+/* ============================= */
+/* 7. Soft Gradient Blink */
+/* ============================= */
+.placeholder-soft {
+    height: 30px;
+    border-radius: 8px;
+    background: linear-gradient(-90deg,
+            #2a2a2a 0%,
+            #3a3a3a 50%,
+            #2a2a2a 100%);
+    background-size: 400% 400%;
+    animation: softBlink 1.5s infinite ease;
+}
+
+@keyframes softBlink {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    100% {
+        background-position: 100% 50%;
+    }
+}

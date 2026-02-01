@@ -1,0 +1,101 @@
+<!-- popup.html -->
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>VU Empire Genie</title>
+  <link rel="stylesheet" href="../assets/css/theme.css">
+  <link rel="stylesheet" href="../assets/css/toogle.css">
+  <link rel="stylesheet" href="../assets/css/loader.css">
+  <link rel="stylesheet" href="../assets/css/placeholder.css">
+  <link rel="stylesheet" href="../assets/css/popup.css">
+  <link rel="stylesheet" href="../assets/css/alert.css">
+</head>
+
+<body class="bg-dark">
+  <!-- Sidebar Overlay -->
+  <div id="sidebarOverlay" class="sidebar-overlay hidden"></div>
+
+  <!-- Sidebar -->
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-header d-flex justify-content-between align-center p-3">
+      <span class="fw-bold">VU Empire Genie</span>
+      <button id="closeSidebar" class="btn btn-icon p-0">
+        <img src="../assets/svg/x.svg" alt="x icon" width="30px">
+      </button>
+    </div>
+
+    <nav class="navbar sidebar-nav h-100">
+      <li class="mb-3" id="nav-auth-section">
+        <!-- Auth Section Placeholder -->
+      </li>
+      <li class="mb-1 text-left">
+        <button class="nav-link border-0  fs-2 bg-transparent outline-0" data-route="home">Home</button>
+      </li>
+      <li class="mb-1 text-left">
+        <button class="nav-link border-0  fs-2 bg-transparent outline-0" data-route="pricing">Pricing</button>
+      </li>
+      <li class="mb-1 text-left">
+        <button class="nav-link border-0  fs-2 bg-transparent outline-0" data-route="support">Support</button>
+      </li>
+      <li class="mb-1 text-left">
+        <button class="nav-link border-0  fs-2  fs-2 bg-transparent outline-0" data-route="updates">Updates</button>
+      </li>
+      <li class="mb-1 text-left">
+        <button class="nav-link border-0  fs-2 bg-transparent outline-0" data-route="feedback">Feedback</button>
+      </li>
+    </nav>
+
+    <div class="sidebar-footer position-absolute bottom-0 w-100">
+      <div class="d-flex align-center justify-content-center">
+        <nav class="navbar d-flex align-center mx-auto">
+          <li>
+            <button class="nav-link me-2 border-0 bg-transparent outline-0" data-route="faq">FAQ</button>
+          </li>
+          <li>
+            <button class="nav-link mx-1 border-0 bg-transparent outline-0" data-route="about">About</button>
+          </li>
+          <li>
+            <button class="nav-link mx-1 border-0 bg-transparent outline-0" data-route="privacy">Privacy</button>
+          </li>
+          <li>
+            <button class="nav-link ms-2 border-0 bg-transparent outline-0" data-route="terms">Terms</button>
+          </li>
+        </nav>
+      </div>
+    </div>
+  </aside>
+
+  <div class="bg-secondary position-sticky top-0 text-center z-index-2 p-2">
+    <div class="d-flex justify-content-between align-center position-relative">
+      <img src="../assets/icons/icon.png" class="logo-icon me-3" alt="VU Empire Genie"
+        style="width: 60px; height: 60px;">
+      <div class="logo-text">
+        <h1 class="h3 mb-0">VU Empire Genie</h1>
+        <div class="tagline text-muted">AI-Powered Study Assistant</div>
+      </div>
+      <button class="menu-icon btn p-0">
+        <img src="../assets/svg/list.svg" alt="menu icon" class="position-absolute right-0 top-1" width="30px">
+      </button>
+    </div>
+  </div>
+
+  <div class="container pt-2 px-4 pb-4 h-100" id="app-view">
+    <!-- UI Framework will render pages here -->
+  </div>
+
+  <!-- Footer -->
+  <div class="bg-secondary fs-5 text-center position-fixed bottom-0 text-muted z-index-2 w-100">
+    Powered by VU Empire • Made with ❤️ for VU Students
+  </div>
+
+  <div class="alert-container top-right" id="alertContainer"></div>
+
+  <script src="js/AlertManager.js"></script>
+  <script src="js/LoaderManager.js"></script>
+  <script type="module" src="js/appView.js"></script>
+  <script type="module" src="../ui/core/app.js"></script>
+</body>
+
+</html>

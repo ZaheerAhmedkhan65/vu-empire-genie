@@ -1416,7 +1416,7 @@ class VUQuizGenie {
                 }
             }
 
-            console.log(`✅ Successfully selected radio button`);
+            console.log(`Successfully selected radio button`);
             return true;
 
         } catch (error) {

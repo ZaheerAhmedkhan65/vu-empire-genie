@@ -1,0 +1,71 @@
+:root {
+    --toggle-width: 50px;
+    --toggle-height: 24px;
+    --toggle-bg: #ccc;
+    /* off state */
+    --toggle-bg-checked: #712cf9;
+    /* primary color */
+    --toggle-circle: #fff;
+    --transition-speed: 0.3s;
+}
+
+/* Hide default checkbox */
+.toggle input {
+    display: none;
+}
+
+/* Toggle container */
+.toggle {
+    position: relative;
+    width: var(--toggle-width);
+    height: var(--toggle-height);
+    display: inline-block;
+}
+
+/* Toggle slider background */
+.slider {
+    position: absolute;
+    cursor: pointer;
+    background-color: var(--toggle-bg);
+    border-radius: var(--toggle-height);
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    transition: background-color var(--transition-speed);
+}
+
+/* Toggle circle */
+.slider::before {
+    content: '';
+    position: absolute;
+    height: calc(var(--toggle-height) - 6px);
+    width: calc(var(--toggle-height) - 6px);
+    left: 3px;
+    bottom: 3px;
+    background-color: var(--toggle-circle);
+    border-radius: 50%;
+    transition: transform var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Checked state */
+.toggle input:checked+.slider {
+    background-color: var(--toggle-bg-checked);
+}
+
+.toggle input:checked+.slider::before {
+    transform: translateX(calc(var(--toggle-width) - var(--toggle-height)));
+}
+
+/* Optional: Glow effect when active */
+.toggle input:checked+.slider::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: var(--toggle-height);
+    box-shadow: 0 0 10px var(--toggle-bg-checked);
+    opacity: 0.3;
+    top: 0;
+    left: 0;
+}
