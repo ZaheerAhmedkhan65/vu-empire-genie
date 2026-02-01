@@ -25,7 +25,7 @@ async function initPopup() {
         console.log('Popup initialized successfully');
     } catch (error) {
         console.error('Error initializing popup:', error);
-        showStatus('Error initializing: ' + error.message, 'error');
+        alerts.show('error', 'Error initializing: ' + error.message);
     }
 }
 
@@ -48,11 +48,9 @@ async function initApiStatus() {
                 message.style.display = 'block';
 
                 if (!apiKey) {
-                    message.innerHTML = '<span class="status-icon">❌</span><span class="status-text">API key not set</span>';
-                    message.style.color = '#ef4444';
+                    message.innerHTML = '<span class="badge badge-danger"></span>';
                 } else {
-                    message.innerHTML = '<span class="status-icon">✅</span><span class="status-text">API ready</span>';
-                    message.style.color = '#10b981';
+                    message.innerHTML = '<span class="badge badge-success"></span>';
                 }
             }, 500);
         }
@@ -84,7 +82,7 @@ async function initSettingsUI() {
 
     } catch (error) {
         console.error('Error loading settings:', error);
-        showStatus('Error loading settings', 'error');
+        alerts.show('error', 'Error loading settings: ' + error.message);
     }
 }
 
@@ -125,10 +123,10 @@ async function showPageActions(url, tabId) {
 
     if (url.includes('LessonViewer.aspx')) {
         actionContainer.innerHTML = `
-            <button class="page-action-btn" id="auto-skip-lecture">
+            <button class="btn btn-primary" id="auto-skip-lecture">
                 Auto Skip All Lectures
             </button>
-            <button class="page-action-btn" id="skip-lecture">
+            <button class="btn btn-primary" id="skip-lecture">
                 Skip This Lecture
             </button>
         `;
@@ -144,10 +142,10 @@ async function showPageActions(url, tabId) {
 
     } else if (url.includes('Quiz/') || url.includes('FormativeAssessment/')) {
         actionContainer.innerHTML = `
-            <button class="page-action-btn" id="copy-quiz">
+            <button class="btn btn-primary" id="copy-quiz">
                 Copy Quiz
             </button>
-            <button class="page-action-btn secondary" id="solve-quiz">
+            <button class="btn btn-primary secondary" id="solve-quiz">
                 Solve with AI
             </button>
         `;
@@ -163,10 +161,10 @@ async function showPageActions(url, tabId) {
 
     } else if (url.includes('GDB/StudentMessage.aspx')) {
         actionContainer.innerHTML = `
-            <button class="page-action-btn" id="enable-copy">
+            <button class="btn btn-primary" id="enable-copy">
                 Enable Copy/Paste
             </button>
-            <button class="page-action-btn secondary" id="solve-gdb">
+            <button class="btn btn-primary secondary" id="solve-gdb">
                 Solve with AI
             </button>
         `;
@@ -185,7 +183,6 @@ async function showPageActions(url, tabId) {
 
 async function executeOnTab(tabId, action) {
     try {
-        showStatus('Executing action...', 'info');
 
         // Try to execute script in the tab
         await chrome.scripting.executeScript({
@@ -203,10 +200,10 @@ async function executeOnTab(tabId, action) {
             world: 'MAIN' // Try MAIN world first
         });
 
-        showStatus('Action executed successfully!', 'success');
+        alerts.show('success', 'Action executed successfully');
     } catch (error) {
         console.error(`Error executing ${action}:`, error);
-        showStatus(`Error: ${error.message}`, 'error');
+        alerts.show('error', `Error executing ${action}: ${error.message}`);
     }
 }
 
@@ -233,12 +230,11 @@ async function initSettings() {
 
     } catch (error) {
         console.error('Error loading settings:', error);
-        showStatus('Error loading settings', 'error');
+        alerts.show('error', 'Error loading settings: ' + error.message);
     }
 }
 
 function updateSettingsUI(settings) {
-    console.log('Settings updated in UI:', settings);
 
     // Update form values without triggering change events
     document.getElementById('apiKey').value = settings.apiKey || '';
@@ -276,67 +272,27 @@ async function saveSettings() {
         const success = await settingsManager.saveToStorage(newSettings);
 
         if (success) {
-            showStatus('✅ Settings saved successfully!', 'success');
-
+            alerts.show('success', 'Settings saved successfully!', { bounce: true })
             // Refresh API status
             await initApiStatus();
-
-            // Clear success message after 3 seconds
-            setTimeout(() => {
-                const statusEl = document.getElementById('status');
-                if (statusEl && statusEl.classList.contains('success')) {
-                    statusEl.style.display = 'none';
-                }
-            }, 3000);
         } else {
-            showStatus('❌ Error saving settings', 'error');
+            alerts.show('error', 'Error saving settings', { bounce: true });
         }
 
     } catch (error) {
         console.error('Error saving settings:', error);
-        showStatus('❌ Error saving settings: ' + error.message, 'error');
+        alerts.show('error', 'Error saving settings: ' + error.message, { bounce: true });
     }
-}
-
-function openTab(path) {
-    chrome.tabs.create({ url: `https://vulms.vu.edu.pk/${path}` });
-}
-
-function showStatus(message, type = 'info') {
-    const statusEl = document.getElementById('status');
-    if (!statusEl) return;
-
-    statusEl.textContent = message;
-    statusEl.className = `status ${type}`;
-    statusEl.style.display = 'block';
-
-    // Auto-hide info messages after 2 seconds, others after 4 seconds
-    const hideTime = type === 'info' ? 2000 : 4000;
-    setTimeout(() => {
-        statusEl.style.display = 'none';
-    }, hideTime);
-}
-
-// Add some utility functions
-function getCurrentTab() {
-    return chrome.tabs.query({ active: true, currentWindow: true })
-        .then(([tab]) => tab)
-        .catch(error => {
-            console.error('Error getting current tab:', error);
-            return null;
-        });
 }
 
 // Listen for messages from content scripts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    console.log('Message received in popup:', request);
-
     switch (request.type) {
         case 'ACTION_COMPLETE':
-            showStatus(request.message, 'success');
+            alerts.show('success', request.message, { bounce: true });
             break;
         case 'ACTION_ERROR':
-            showStatus(request.message, 'error');
+            alerts.show('error', request.message, { bounce: true });
             break;
     }
 
