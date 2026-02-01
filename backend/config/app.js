@@ -3,6 +3,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const quizRoutes = require('../routes/quizRoutes');
+const authRoutes = require('../routes/authRoutes');
 const multer = require('multer');
 const path = require('path');
 
@@ -110,6 +111,7 @@ app.use((err, req, res, next) => {
     next(err);
 });
 
+app.use('/api/auth', authRoutes);
 app.use('/api', quizRoutes);
 
 // Health check endpoint
