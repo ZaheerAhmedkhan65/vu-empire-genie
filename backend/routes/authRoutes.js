@@ -41,7 +41,6 @@ router.get(
     }
 );
 
-
 // Authentication actions
 router.post('/create-account', authController.signup);
 router.post('/login', authController.login);
