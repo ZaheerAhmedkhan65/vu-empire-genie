@@ -35,19 +35,19 @@ function updateSidebarContent(user) {
     // Create auth section
     const authSection = document.createElement('div');
     authSection.className = 'auth-section mt-3';
-    
+
     if (user) {
         // User is signed in - show avatar and logout
         authSection.innerHTML = `
             <div class="auth-item d-flex align-items-center mb-3 px-3">
                 <div class="avatar-container me-3">
-                    ${user.avatar ? 
-                        `<img src="${user.avatar}" alt="Avatar" style="object-fit: cover;" width="40px" height="40px" class="avatar rounded-circle">` 
-                        :`<strong>${user.username[0].toUpperCase()}</strong>`
-                    }
+                    ${user.avatar ?
+                `<img src="${user.avatar}" alt="Avatar" style="object-fit: cover;" width="40px" height="40px" class="avatar rounded-circle">`
+                : `<strong>${user.name[0].toUpperCase()}</strong>`
+            }
                 </div>
                 <div class="user-info flex-grow-1">
-                    <div class="fw-bold">${user.username || user.email}</div>
+                    <div class="fw-bold">${user.name || user.email}</div>
                 </div>
             </div>
             <div class="auth-item px-3">
@@ -61,7 +61,7 @@ function updateSidebarContent(user) {
                 </button>
             </div>
         `;
-        
+
         // Add logout event listener
         const signoutBtn = authSection.querySelector('#sidebar-signout-btn');
         if (signoutBtn) {

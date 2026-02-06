@@ -3,21 +3,21 @@ import { authManager } from "../core/auth.js";
 
 // Example of a protected route that requires authentication
 registerRoute("dashboard", (params = {}) => {
-    // Check if user is authenticated
-    if (!authManager.isAuthenticated()) {
-        // Redirect to signin with current path as redirect target
-        return navigate('signin', { redirectTo: 'dashboard' });
-    }
+  // Check if user is authenticated
+  if (!authManager.isAuthenticated()) {
+    // Redirect to signin with current path as redirect target
+    return navigate('signin', { redirectTo: 'dashboard' });
+  }
 
-    const container = document.createElement('div');
-    const user = authManager.getCurrentUser();
-    
-    container.innerHTML = `
+  const container = document.createElement('div');
+  const user = authManager.getCurrentUser();
+
+  container.innerHTML = `
     <div class="fs-1 mb-3">Dashboard</div>
     
     <div class="mb-3">
       <p class="text-muted">
-         <strong>${user ? user.username : 'User'}</strong>!
+         <strong>${user ? user.name : 'User'}</strong>!
       </p>
     </div>
 
@@ -35,5 +35,5 @@ registerRoute("dashboard", (params = {}) => {
     </div>
   `;
 
-    return container;
+  return container;
 });
