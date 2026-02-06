@@ -6,6 +6,7 @@ const cookieParser = require('cookie-parser');
 const methodOverride = require("method-override");
 const quizRoutes = require('../routes/quiz.route');
 const authRoutes = require('../routes/auth.route');
+const feedbackRoutes = require('../routes/feedback.route');
 const multer = require('multer');
 const path = require('path');
 
@@ -118,6 +119,7 @@ app.use((err, req, res, next) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/quiz', quizRoutes);
+app.use('/api/feedback', feedbackRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
