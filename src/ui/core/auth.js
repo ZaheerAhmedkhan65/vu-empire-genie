@@ -3,7 +3,7 @@ export class AuthManager {
     constructor() {
         this.currentUser = null;
         this.listeners = [];
-        
+
         // Check for existing session on initialization
         this.checkSession();
     }
@@ -51,12 +51,12 @@ export class AuthManager {
                     // Extract user data from the response
                     const userData = {
                         id: result.data.id,
-                        username: result.data.username,
+                        name: result.data.name,
                         email: result.data.email,
                         role: result.data.role,
                         avatar: result.data.avatar
                     };
-                    
+
                     this.currentUser = userData;
                     localStorage.setItem('vu_empire_user', JSON.stringify(userData));
                     this.notifyListeners();
@@ -81,7 +81,7 @@ export class AuthManager {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ username: name, email, password })
+                body: JSON.stringify({ name: name, email, password })
             });
 
             if (response.ok) {
@@ -90,12 +90,12 @@ export class AuthManager {
                     // Extract user data from the response
                     const userData = {
                         id: result.data.id,
-                        username: result.data.username,
+                        name: result.data.name,
                         email: result.data.email,
                         role: result.data.role,
                         avatar: result.data.avatar
                     };
-                    
+
                     this.currentUser = userData;
                     localStorage.setItem('vu_empire_user', JSON.stringify(userData));
                     this.notifyListeners();

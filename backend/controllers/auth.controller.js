@@ -1,126 +1,138 @@
-//authController.js
+// authController.js
 const AuthService = require('../services/auth.service');
 
+/* -------------------- SIGNUP -------------------- */
 const signup = async (req, res) => {
-    const { name, email, password } = req.body;
-
     try {
-        const result = await AuthService.signup({ name, email, password });
+        const result = await AuthService.signup(req.body);
 
         saveCookie(res, result.token);
 
-        const verificationUrl = `${req.protocol}://${req.get('host')}/auth/verify-email?token=${result.verificationToken}`;
-
-        res.status(201).json({ ...result });
+        res.status(201).json({
+            status: 'success',
+            ...result
+        });
     } catch (error) {
-        console.error('Signup error:', error.message);
-        res.status(500).json({
+        res.status(error.statusCode || 500).json({
             status: 'error',
             message: error.message
         });
     }
-}
+};
 
+/* -------------------- VERIFY EMAIL -------------------- */
 const verifyEmail = async (req, res) => {
-    const { token } = req.query;
     try {
-        const result = await AuthService.verifyEmail(token);
+        const result = await AuthService.verifyEmail(req.query.token);
 
-        res.status(200).json({ ...result });
-
+        res.status(200).json({
+            status: 'success',
+            ...result
+        });
     } catch (error) {
-        res.status(500).json({ status: 'error', message: 'Error verifying email' });
-    }
-}
-
-const login = async (req, res) => {
-    const { email, password } = req.body;
-
-    try {
-        const result = await AuthService.login({ email, password });
-
-        saveCookie(res, result.token);
-
-        return res.status(200).json({ ...result });
-    } catch (error) {
-        return res.status(500).json({ status: 'error', message: 'Error logging in' });
+        res.status(error.statusCode || 500).json({
+            status: 'error',
+            message: error.message
+        });
     }
 };
 
+/* -------------------- LOGIN -------------------- */
+const login = async (req, res) => {
+    try {
+        const result = await AuthService.login(req.body);
 
+        saveCookie(res, result.token);
+
+        res.status(200).json({
+            status: 'success',
+            ...result
+        });
+    } catch (error) {
+        res.status(error.statusCode || 500).json({
+            status: 'error',
+            message: error.message
+        });
+    }
+};
+
+/* -------------------- FORGOT PASSWORD -------------------- */
 const forgotPassword = async (req, res) => {
-    const { email } = req.body;
     try {
-        const result = await AuthService.forgotPassword(email);
+        const result = await AuthService.forgotPassword(req.body.email);
 
-        // Send reset email
-        const resetUrl = `${req.protocol}://${req.get('host')}/auth/reset-password?token=${result.resetToken}`;
-
-        // Send reset email
-        // await sendEmail({
-        //     to: user.email,
-        //     subject: 'Password Reset Request',
-        //     template: 'password-reset',
-        //     context: {
-        //         name: user.name,
-        //         resetUrl,
-        //         expiryHours: 1
-        //     }
-        // });
-
-        return res.status(200).json({ ...result });
+        // Intentionally no token returned in response (security)
+        res.status(200).json({
+            status: 'success',
+            ...result
+        });
     } catch (error) {
-        return res.status(500).json({ message: 'Error forgotting password' });
+        res.status(error.statusCode || 500).json({
+            status: 'error',
+            message: error.message
+        });
     }
-}
+};
 
+/* -------------------- RESET PASSWORD -------------------- */
 const resetPassword = async (req, res) => {
-    const { token } = req.query;
-    const { password } = req.body;
     try {
-        const result = await AuthService.resetPassword(token, password);
+        const result = await AuthService.resetPassword(
+            req.query.token,
+            req.body.password
+        );
 
-        // Send confirmation email
-        // await sendEmail({
-        //     to: user.email,
-        //     subject: 'Password Changed Successfully',
-        //     template: 'password-changed',
-        //     context: {
-        //         name: user.name
-        //     }
-        // });
-
-        return res.status(200).json({ ...result });
+        res.status(200).json({
+            status: 'success',
+            ...result
+        });
     } catch (error) {
-        res.status(500).json({ message: 'Error resetting password' });
+        res.status(error.statusCode || 500).json({
+            status: 'error',
+            message: error.message
+        });
     }
-}
+};
 
+/* -------------------- REFRESH TOKEN -------------------- */
 const refreshToken = async (req, res) => {
-    const token = req.cookies.token;
-
-    if (!token) {
-        return res.status(401).json({ message: 'No token provided' });
-    }
-
     try {
-        const result = await AuthService.refreshToken(token);
+        const oldToken = req.cookies.token;
+        if (!oldToken) {
+            return res.status(401).json({
+                status: 'error',
+                message: 'No token provided'
+            });
+        }
 
-        saveCookie(res, result.newToken);
+        const result = await AuthService.refreshToken(oldToken);
 
-        res.status(200).json({ ...result });
+        saveCookie(res, result.token);
+
+        res.status(200).json({
+            status: 'success',
+            ...result
+        });
     } catch (error) {
-        return res.status(401).json({ message: 'Invalid token' });
+        res.status(error.statusCode || 401).json({
+            status: 'error',
+            message: error.message
+        });
     }
-}
+};
 
+/* -------------------- LOGOUT -------------------- */
 const logout = (req, res) => {
     res.clearCookie('token');
-    res.status(200).json({ status: 'success', message: 'Logout successfully!' });
-}
 
+    res.status(200).json({
+        status: 'success',
+        message: 'Logged out successfully'
+    });
+};
+
+/* -------------------- COOKIE HELPER -------------------- */
 function saveCookie(res, token) {
-    // Set JWT cookie
     res.cookie('token', token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',

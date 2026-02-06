@@ -60,7 +60,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
         console.log("formattedData", formattedData)
         chrome.storage.local.set({ quizData }, () => {
-          // saveQuizQuestionToServer(formattedData, sendResponse);
+          saveQuizQuestionToServer(formattedData, sendResponse);
         });
         sendResponse({ success: true });
       });

@@ -1,3 +1,4 @@
+//validations/auth.validation.js
 const Joi = require('joi');
 
 const authValidation = {
