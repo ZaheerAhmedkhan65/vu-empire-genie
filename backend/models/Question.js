@@ -27,6 +27,16 @@ class Question {
         return rows[0];
     }
 
+    static async findByCourseAndText(courseId, questionText) {
+        const [rows] = await db.query(
+            `SELECT * FROM questions 
+         WHERE course_id = ? AND question_text = ? 
+         LIMIT 1`,
+            [courseId, questionText]
+        );
+        return rows[0];
+    }
+
     static async create(questionData) {
         const { course_id, question_text, explanation, url, timestamp } = questionData;
         const [result] = await db.query(
@@ -101,6 +111,25 @@ class Question {
 
     static async getQuestionBank() {
         const [rows] = await db.query('SELECT * FROM question_bank_view ORDER BY course_code, question_added DESC');
+        return rows;
+    }
+
+    static async search(query, courseCode){
+        const [rows] = await db.query(`
+            SELECT 
+                q.question_id,
+                q.question_text,
+                c.course_code,
+                c.course_name,
+                DATE_FORMAT(q.timestamp, '%Y-%m-%d %H:%i') as added_time,
+                GROUP_CONCAT(CASE WHEN o.is_correct = TRUE THEN o.letter END) as correct_answers
+            FROM questions q
+            JOIN courses c ON q.course_id = c.course_id
+            LEFT JOIN options o ON q.question_id = o.question_id
+            WHERE q.question_text LIKE ? AND c.course_code = ?
+            GROUP BY q.question_id, q.question_text, c.course_code, c.course_name, q.timestamp
+            ORDER BY q.timestamp DESC
+        `, [`%${query}%`, courseCode]);
         return rows;
     }
 }

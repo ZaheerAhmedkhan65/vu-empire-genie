@@ -1,9 +1,11 @@
 //config/app.js
 const express = require('express');
-const bodyParser = require('body-parser');
 const cors = require('cors');
-const quizRoutes = require('../routes/quizRoutes');
-const authRoutes = require('../routes/authRoutes');
+const morgan = require("morgan");
+const cookieParser = require('cookie-parser');
+const methodOverride = require("method-override");
+const quizRoutes = require('../routes/quiz.route');
+const authRoutes = require('../routes/auth.route');
 const multer = require('multer');
 const path = require('path');
 
@@ -17,8 +19,11 @@ app.set('views', path.join(__dirname, '../views'));
 
 // Middleware
 app.use(cors());
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(morgan('dev'));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+app.use(methodOverride("_method"));
 app.use(express.static(path.join(__dirname, '../public')));
 
 // Routes
@@ -112,7 +117,7 @@ app.use((err, req, res, next) => {
 });
 
 app.use('/api/auth', authRoutes);
-app.use('/api', quizRoutes);
+app.use('/api/quiz', quizRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
