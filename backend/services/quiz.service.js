@@ -16,8 +16,6 @@ class QuizService {
             details: []
         };
 
-        console.log('Creating multiple quiz records...', results.totalRecords);
-
         for (let i = 0; i < quizData.length; i++) {
             const record = quizData[i];
 
@@ -78,7 +76,6 @@ class QuizService {
                         questionId: question.question_id
                     });
 
-                    console.log(`Question created: ${question.question_id}`);
                 } else {
                     // --- Skip duplicate ---
                     results.details.push({
@@ -87,7 +84,6 @@ class QuizService {
                         questionId: existingQuestion.question_id
                     });
 
-                    console.log(`Duplicate found, skipped: ${existingQuestion.question_id}`);
                 }
 
             } catch (error) {

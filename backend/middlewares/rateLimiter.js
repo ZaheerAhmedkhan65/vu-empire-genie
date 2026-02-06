@@ -22,16 +22,18 @@ const generalLimiter = rateLimit({
     }) : undefined
 });
 
-// Authentication-specific rate limiter (stricter)
+// Authentication limiter
 const authLimiter = rateLimit({
     windowMs: 60 * 60 * 1000, // 1 hour
-    max: 5, // Limit each IP to 5 failed auth attempts per hour
-    message: 'Too many authentication attempts, please try again later.',
-    skipSuccessfulRequests: true, // Only count failed attempts
-    keyGenerator: (req) => {
-        // Use IP + name for more granular limiting
-        return `${ipKeyGenerator(req)}${req.body.email || req.body.name || 'unknown'}`;
-    }
+    max: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    skipSuccessfulRequests: true,
+    message: {
+        error: 'Too many login attempts. Please try again later.'
+    },
+    keyGenerator: (req) =>
+        `${ipKeyGenerator(req)}:${req.body.email || 'unknown'}`
 });
 
 // Password reset limiter
