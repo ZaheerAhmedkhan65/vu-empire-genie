@@ -17,15 +17,14 @@ const {
 
 router.get('/verify-email', authController.verifyEmail);
 
-router.use(burstLimitMiddleware);
 // Authentication actions
-router.post('/create-account', authLimiter, validate(signupValidation), authController.signup);
-router.post('/login', authLimiter, validate(signinValidation), authController.login);
-router.patch('/refresh-token', authController.refreshToken);
-router.delete('/logout', authController.logout);
+router.post('/create-account', burstLimitMiddleware, authLimiter, validate(signupValidation), authController.signup);
+router.post('/login', burstLimitMiddleware, authLimiter, validate(signinValidation), authController.login);
+router.patch('/refresh-token', burstLimitMiddleware, authController.refreshToken);
+router.delete('/logout', burstLimitMiddleware, authController.logout);
 
 // Password reset
-router.post('/forgot-password', passwordResetLimiter, validate(forgotPasswordValidation), authController.forgotPassword);
-router.patch('/reset-password', validate(resetPasswordValidation), authController.resetPassword);
+router.post('/forgot-password', burstLimitMiddleware, passwordResetLimiter, validate(forgotPasswordValidation), authController.forgotPassword);
+router.patch('/reset-password', burstLimitMiddleware, validate(resetPasswordValidation), authController.resetPassword);
 
 module.exports = router;
