@@ -82,8 +82,8 @@ class User {
         return rows[0];
     }
 
-    static async findByUsername(username) {
-        const [rows] = await db.query('SELECT * FROM users WHERE username = ?', [username]);
+    static async findByUserName(name) {
+        const [rows] = await db.query('SELECT * FROM users WHERE name = ?', [name]);
         return rows[0];
     }
 
@@ -122,22 +122,22 @@ class User {
      * @param {Object} userData - user data
      */
     static async create({
-        username,
+        name,
         email,
         password = null,
         role = 'user',
         verificationToken = null,
         verificationTokenExpires = null,
         google_id = null,
-        email_verified = true
+        email_verified = false
     }) {
         const [result] = await db.query(
             `INSERT INTO users 
-            (username, email, password, role, verification_token, verification_token_expires, 
+            (name, email, password, role, verification_token, verification_token_expires, 
              email_verified, is_online, status, avatar, google_id, created_at, updated_at) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
-                username,
+                name,
                 email,
                 password,
                 role,
@@ -181,7 +181,7 @@ class User {
     }
 
     static async updateUser(id, updates) {
-        const allowedFields = ['username', 'program', 'degree', 'cgpa', 'avatar', 'current_semester'];
+        const allowedFields = ['name', 'program', 'degree', 'cgpa', 'avatar', 'current_semester'];
         const filteredUpdates = {};
 
         for (const [key, value] of Object.entries(updates)) {
@@ -217,7 +217,7 @@ class User {
     }
 
     static async getAll() {
-        const [rows] = await db.query('SELECT id, username, email, role, is_online FROM users');
+        const [rows] = await db.query('SELECT id, name, email, role, is_online FROM users');
         return rows;
     }
 }
