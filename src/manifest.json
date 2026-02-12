@@ -41,6 +41,16 @@
     },
     {
       "matches": [
+        "https://vulms.vu.edu.pk/LessonViewer.aspx*"
+      ],
+      "js": [
+        "scripts/content_lecture_isolated.js"
+      ],
+      "run_at": "document_end",
+      "world": "ISOLATED"
+    },
+    {
+      "matches": [
         "https://vulms.vu.edu.pk/Quiz/*",
         "https://vulms.vu.edu.pk/FormativeAssessment/*"
       ],
@@ -50,16 +60,6 @@
       "run_at": "document_end",
       "world": "ISOLATED",
       "all_frames": true
-    },
-    {
-      "matches": [
-        "https://vulms.vu.edu.pk/Home.aspx*",
-        "https://vulms.vu.edu.pk/Profile/StudentProfile.aspx*"
-      ],
-      "js": [
-        "scripts/content_student_info.js"
-      ],
-      "run_at": "document_end"
     },
     {
       "matches": [
@@ -90,9 +90,7 @@
         "scripts/content_isolated.js",
         "scripts/injector.js",
         "scripts/pdfGenerator.js",
-        "scripts/settings_manager.js",
-        "scripts/readers/user_info.js",
-        "scripts/content_student_info.js"
+        "scripts/settings_manager.js"
       ],
       "matches": [
         "https://vulms.vu.edu.pk/*",

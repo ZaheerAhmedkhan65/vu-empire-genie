@@ -1,3 +1,4 @@
+<!-- popup.html -->
 <!DOCTYPE html>
 <html>
 
@@ -15,20 +16,37 @@
 <body class="bg-dark">
   <div class="bg-secondary position-sticky top-0 text-center z-index-2 p-2">
     <div class="d-flex justify-content-between align-center position-relative">
-      <div class="d-flex align-center">
-        <img id="student-profile-image" alt="Student Profile" class="rounded-circle" width="45" height="45">
+      <div class="d-flex">
+        <img alt="VU Empire Genie Logo" src="../assets/icons/icon.png" width="45" height="45">
         <div class="d-flex flex-column align-start ms-2">
           <h1 class="mb-0">
-            <span id="student-name" class="fs-3"></span>
+            <span class="fs-1">
+              VU Empire Genie
+            </span>
           </h1>
-          <div class="tagline text-muted">
-            <span id="student-id" class="fs-3"></span>
-          </div>
         </div>
       </div>
       <div id="nav-auth-section" class="position-absolute right-0 top-1">
         <!-- Authentication Action Buttons Section -->
       </div>
+    </div>
+  </div>
+
+  <div class="d-flex justify-content-between align-center position-relative p-2">
+    <div class="d-flex align-center">
+      <img id="student-profile-image" alt="Student Profile" class="rounded-circle" width="45" height="45">
+      <div class="d-flex flex-column align-start ms-2">
+        <h2 class="mb-0">
+          <span id="student-name" class="fs-3"></span>
+        </h2>
+        <div class="tagline text-muted">
+          <span id="student-id" class="fs-3"></span>
+        </div>
+      </div>
+    </div>
+    <div id="current-plan-section" class="navbar">
+      <!-- Current Plan Section -->
+      <span class="nav-link text-white">Free</span>
     </div>
   </div>
 
@@ -73,7 +91,7 @@
   </main>
 
   <!-- Footer -->
-  <nav class="bg-secondary position-fixed bottom-0 text-muted z-index-2 w-100 py-1 px-2">
+  <nav class="bg-secondary position-fixed bottom-0 text-muted z-index-2 w-100 p-2">
     <ul class="navbar d-flex align-center justify-content-between">
       <li>
         <button class="nav-link border-0  fs-2 bg-transparent outline-0 d-flex align-center justify-content-center" data-route="home">

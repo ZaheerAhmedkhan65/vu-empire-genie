@@ -103,6 +103,10 @@ class SettingsManager {
                             if (genieInstance) {
                                 genieInstance.apiKey = settings.apiKey;
                                 genieInstance.settings = settings;
+                                // NEW: Notify the instance about settings update
+                                if (typeof genieInstance.onSettingsUpdated === 'function') {
+                                    genieInstance.onSettingsUpdated(settings);
+                                }
                                 console.log('Updated active genie instance with new settings');
                             }
                         },
