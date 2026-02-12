@@ -38,26 +38,6 @@ class Student {
         const [result] = await db.query('DELETE FROM students WHERE student_id = ?', [studentId]);
         return result.affectedRows > 0;
     }
-<<<<<<< Updated upstream
-=======
-
-    static async getStudentPerformance(studentId) {
-        const [rows] = await db.query(
-            `SELECT 
-                s.student_id,
-                s.student_name,
-                COUNT(sa.answer_id) as total_attempts,
-                SUM(CASE WHEN sa.is_correct THEN 1 ELSE 0 END) as correct_answers,
-                ROUND((SUM(CASE WHEN sa.is_correct THEN 1 ELSE 0 END) / COUNT(*)) * 100, 2) as score_percentage
-            FROM students s
-            LEFT JOIN student_answers sa ON s.student_id = sa.student_id
-            WHERE s.student_id = ?
-            GROUP BY s.student_id`,
-            [studentId]
-        );
-        return rows[0];
-    }
->>>>>>> Stashed changes
 }
 
 module.exports = Student;

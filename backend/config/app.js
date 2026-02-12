@@ -1,4 +1,3 @@
-<<<<<<< Updated upstream
 //config/app.js
 const express = require('express');
 const cors = require('cors');
@@ -10,19 +9,11 @@ const authRoutes = require('../routes/auth.route');
 const feedbackRoutes = require('../routes/feedback.route');
 const multer = require('multer');
 const path = require('path');
-=======
-const express = require('express');
-const bodyParser = require('body-parser');
-const cors = require('cors');
-const quizRoutes = require('../routes/quizRoutes');
-const multer = require('multer');
->>>>>>> Stashed changes
 
 const app = express();
 
 require("dotenv").config();
 
-<<<<<<< Updated upstream
 // Set EJS as the view engine
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../views'));
@@ -129,28 +120,6 @@ app.use((err, req, res, next) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/quiz', quizRoutes);
 app.use('/api/feedback', feedbackRoutes);
-=======
-// Middleware
-app.use(cors());
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-
-// Routes
-app.get('/', (req, res) => {
-    res.send('Hello World!');
-});
-
-app.use('/api', quizRoutes);
-
-// Health check endpoint
-app.get('/health', (req, res) => {
-    res.status(200).json({
-        status: 'OK',
-        timestamp: new Date().toISOString(),
-        service: 'Quiz API'
-    });
-});
->>>>>>> Stashed changes
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -164,7 +133,6 @@ app.use((err, req, res, next) => {
         });
     }
 
-<<<<<<< Updated upstream
     // Render error page for HTML requests
     if (req.accepts('html')) {
         res.status(500).render('error', {
@@ -185,16 +153,6 @@ app.use((err, req, res, next) => {
 });
 
 // 404
-=======
-    res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
-    });
-});
-
-// 404 handler
->>>>>>> Stashed changes
 app.use((req, res) => {
     res.status(404).json({
         success: false,
