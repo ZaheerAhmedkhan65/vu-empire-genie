@@ -60,7 +60,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
         console.log("formattedData", formattedData)
         chrome.storage.local.set({ quizData }, () => {
-          saveQuizQuestionToServer(formattedData, sendResponse);
+          // saveQuizQuestionToServer(formattedData, sendResponse);
         });
         sendResponse({ success: true });
       });
@@ -154,3 +154,54 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     console.log('VU page loaded:', tab.url);
   }
 });
+
+// Listen for messages from content scripts
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log('Background message received:', request.type, 'from tab:', sender.tab?.id);
+
+  switch (request.type) {
+    case 'EXTRACT_STUDENT_INFO':
+      handleStudentInfoExtraction(request, sender, sendResponse);
+      return true;
+
+    case 'GET_STUDENT_INFO':
+      handleGetStudentInfo(request, sender, sendResponse);
+      return true;
+  }
+});
+
+// Handle student info extraction
+async function handleStudentInfoExtraction(request, sender, sendResponse) {
+  try {
+    const studentInfo = request.studentInfo;
+
+    // Save to localStorage
+    await chrome.storage.local.set({ studentInfo });
+
+    // Save to sync storage
+    await chrome.storage.sync.set({ studentInfo });
+
+    console.log('Student info saved:', studentInfo);
+    sendResponse({ success: true, studentInfo });
+  } catch (error) {
+    console.error('Error saving student info:', error);
+    sendResponse({ success: false, error: error.message });
+  }
+}
+
+// Handle getting student info
+async function handleGetStudentInfo(request, sender, sendResponse) {
+  try {
+    const result = await chrome.storage.local.get(['studentInfo']);
+    const studentInfo = result.studentInfo;
+
+    if (studentInfo) {
+      sendResponse({ success: true, studentInfo });
+    } else {
+      sendResponse({ success: false, error: 'No student info found' });
+    }
+  } catch (error) {
+    console.error('Error getting student info:', error);
+    sendResponse({ success: false, error: error.message });
+  }
+}

@@ -1,13 +1,10 @@
 import { initRouter, startRouter, registerPendingRoutes, registerRoute, navigate } from "./router.js";
-import { initSidebar } from "../components/Sidebar.js";
+import { initNavbar } from "../components/Navbar.js";
 import { authManager } from "./auth.js";
 
 // Initialize router first
 const router = initRouter("app-view");
-
-// Initialize sidebar
-initSidebar();
-
+initNavbar();
 // Set up authentication state listener to update UI
 authManager.subscribe((user) => {
     // Update UI elements based on authentication state
@@ -41,11 +38,12 @@ Promise.all([
     import("../pages/about.js"),
     import("../pages/signin.js"),
     import("../pages/signup.js"),
-    import("../pages/dashboard.js")
+    import("../pages/dashboard.js"),
+    import("../pages/settings.js")
 ]).then(() => {
     // Register any pending routes and start with home page
     registerPendingRoutes();
-    
+
     // Register special routes
     registerRoute("signout", () => {
         const container = document.createElement('div');
@@ -53,16 +51,16 @@ Promise.all([
             <div class="fs-1 mb-3">Signing Out...</div>
             <div class="text-muted">You will be redirected to the home page shortly.</div>
         `;
-        
+
         // Sign out and redirect
         setTimeout(() => {
             authManager.signOut();
             navigate('home');
         }, 1000);
-        
+
         return container;
     });
-    
+
     // Start with home page
     startRouter('home');
 }).catch(error => {

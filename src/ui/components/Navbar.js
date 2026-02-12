@@ -2,39 +2,17 @@ import { startRouter, navigate } from "../core/router.js";
 import { authManager } from "../core/auth.js";
 import { appView } from "../../views/js/appView.js";
 
-const sidebar = document.getElementById("sidebar");
-const overlay = document.getElementById("sidebarOverlay");
-const menuIcon = document.querySelector(".menu-icon");
-const closeBtn = document.getElementById("closeSidebar");
-
-// Open
-menuIcon?.addEventListener("click", () => {
-    sidebar.classList.add("open");
-    overlay.classList.remove("hidden");
-});
-
-// Close
-function closeSidebar() {
-    sidebar.classList.remove("open");
-    overlay.classList.add("hidden");
-}
-
-closeBtn?.addEventListener("click", closeSidebar);
-overlay?.addEventListener("click", closeSidebar);
-
-// Update sidebar content based on authentication state
-function updateSidebarContent(user) {
-    const navbar = sidebar.querySelector('.sidebar-nav');
-    const navAuthSection = sidebar.querySelector('#nav-auth-section');
-    if (!navbar) return;
+// Update Navbar content based on authentication state
+function updateNavbarContent(user) {
+    const navAuthSection = document.querySelector('#nav-auth-section');
 
     // Clear existing auth-related items (keep navigation items)
-    const existingAuthItems = navbar.querySelectorAll('.auth-item');
+    const existingAuthItems = document.querySelectorAll('.auth-item');
     existingAuthItems.forEach(item => item.remove());
 
     // Create auth section
     const authSection = document.createElement('div');
-    authSection.className = 'auth-section mt-3';
+    authSection.className = 'auth-section';
 
     if (user) {
         // User is signed in - show avatar and logout
@@ -56,20 +34,19 @@ function updateSidebarContent(user) {
                 </button>
             </div>
             <div class="auth-item px-3 mt-2">
-                <button class="btn btn-danger w-100 auth-item" id="sidebar-signout-btn" onclick="return confirm('Are you sure to logout?')">
+                <button class="btn btn-danger w-100 auth-item" id="navbar-signout-btn" onclick="return confirm('Are you sure to logout?')">
                     Sign Out
                 </button>
             </div>
         `;
 
         // Add logout event listener
-        const signoutBtn = authSection.querySelector('#sidebar-signout-btn');
+        const signoutBtn = authSection.querySelector('#navbar-signout-btn');
         if (signoutBtn) {
             signoutBtn.addEventListener('click', async (e) => {
                 e.preventDefault();
                 lm.show(appView, 'bars');
                 const result = await authManager.signOut();
-                closeSidebar();
                 if (result.success) {
                     // Use setTimeout to allow current navigation to complete
                     setTimeout(() => {
@@ -85,18 +62,9 @@ function updateSidebarContent(user) {
     } else {
         // User is not signed in - show signup and signin buttons
         authSection.innerHTML = `
-            <div class="d-flex align-center gap-2">
-                <div class="auth-item px-1">
-                    <button class="btn btn-primary w-100 auth-item" data-route="signup">
-                        Create Account
-                    </button>
-                </div>
-                <div class="auth-item px-1">
-                    <button class="btn btn-outline-light w-100 auth-item" data-route="signin">
-                        Sign In
-                    </button>
-                </div>
-            </div>
+            <button class="btn btn-primary auth-item" data-route="signin">
+                Sign In
+            </button>
         `;
     }
 
@@ -115,18 +83,17 @@ function setupAuthEventDelegation(container) {
             const route = link.dataset.route;
             console.log(`Auth navigation to ${route}`);
             navigate(route);
-            closeSidebar();
         }
     });
 }
 
-export function initSidebar() {
+export function initNavbar() {
     // Set up initial sidebar content
-    updateSidebarContent(authManager.getCurrentUser());
+    updateNavbarContent(authManager.getCurrentUser());
 
     // Listen for authentication state changes
     authManager.subscribe((user) => {
-        updateSidebarContent(user);
+        updateNavbarContent(user);
     });
 
     // Set up event delegation for navigation links
@@ -135,7 +102,6 @@ export function initSidebar() {
             e.preventDefault();
             console.log(`Navigating to ${link.dataset.route}`);
             navigate(link.dataset.route);
-            closeSidebar();
         });
     });
 }

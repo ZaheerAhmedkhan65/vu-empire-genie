@@ -1336,7 +1336,7 @@ h5 {
 }
 
 .bg-transparent {
-    background-color: transparent;
+    background-color: transparent !important;
 }
 
 /* -------------------------
@@ -1559,8 +1559,7 @@ textarea:focus {
    NAVBAR
 ------------------------- */
 .navbar {
-    background: var(--bg-light);
-    color: var(--color-text);
+    display: flex;
 }
 
 .navbar li {
