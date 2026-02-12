@@ -98,26 +98,6 @@ async function initPageActions() {
     }
 }
 
-async function initQuotaDisplay() {
-    try {
-        // Load quota data if available
-        const settings = await chrome.storage.sync.get(['quotaData', 'lastQuotaUpdate']);
-
-        if (settings.quotaData && settings.lastQuotaUpdate) {
-        } else {
-            // Fetch fresh quota data
-            
-        }
-
-        // Add refresh button listener
-        
-
-    } catch (error) {
-        console.error('Error initializing quota display:', error);
-    }
-}
-
-
 async function showPageActions(url, tabId) {
     const actionContainer = document.getElementById('page-actions');
 
@@ -197,7 +177,7 @@ async function executeOnTab(tabId, action) {
                 }
             },
             args: [action],
-            world: 'MAIN' // Try MAIN world first
+            world: 'MAIN'
         });
 
         alerts.show('success', 'Action executed successfully');

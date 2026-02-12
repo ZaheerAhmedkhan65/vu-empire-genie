@@ -2,6 +2,7 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    line-height: 1;
 }
 
 body {
@@ -20,6 +21,16 @@ body::-webkit-scrollbar {
     width: 100%;
     height: 100%;
     overflow: auto;
+}
+
+#app-view {
+    min-height: 550px;
+}
+
+.main {
+    overflow-y: auto;
+    overflow-x: hidden;
+    height: 100%;
 }
 
 #app::-webkit-scrollbar {

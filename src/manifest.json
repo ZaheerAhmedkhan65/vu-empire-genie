@@ -53,6 +53,16 @@
     },
     {
       "matches": [
+        "https://vulms.vu.edu.pk/Home.aspx*",
+        "https://vulms.vu.edu.pk/Profile/StudentProfile.aspx*"
+      ],
+      "js": [
+        "scripts/content_student_info.js"
+      ],
+      "run_at": "document_end"
+    },
+    {
+      "matches": [
         "<all_urls>"
       ],
       "js": [
@@ -80,7 +90,9 @@
         "scripts/content_isolated.js",
         "scripts/injector.js",
         "scripts/pdfGenerator.js",
-        "scripts/settings_manager.js"
+        "scripts/settings_manager.js",
+        "scripts/readers/user_info.js",
+        "scripts/content_student_info.js"
       ],
       "matches": [
         "https://vulms.vu.edu.pk/*",
