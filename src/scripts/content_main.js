@@ -1,4 +1,4 @@
-// content_main.js - FIXED with proper error handling
+// scripts/content_main.js
 console.log('VU Empire Genie (MAIN World) - Lecture Mode - FIXED');
 
 class VULectureGenie {
@@ -72,7 +72,7 @@ class VULectureGenie {
                 <div class="vu-genie-content-wrapper">
                     <div class="vu-genie-content">
                         <button class="vu-btn ${this.settings.autoSkipLecture ? 'active' : ''}" data-action="auto-skip-lecture">
-                           ${this.settings.autoSkipLecture ? '✓ Auto Skip ON' : 'Auto Skip All Lectures'}
+                           ${this.settings.autoSkipLecture ? 'Stop' : 'Auto Skip All Lectures'}
                         </button>
 
                         <button class="vu-btn primary" data-action="skip-lecture">
@@ -676,17 +676,32 @@ class VULectureGenie {
         try {
             this.settings.autoSkipLecture = !this.settings.autoSkipLecture;
 
-            // Save setting
+            // Save to localStorage (for immediate use and fallback)
             try {
                 const savedSettings = localStorage.getItem('vuGenie_settings');
                 let settings = savedSettings ? JSON.parse(savedSettings) : {};
                 settings.autoSkipAllLectures = this.settings.autoSkipLecture;
                 localStorage.setItem('vuGenie_settings', JSON.stringify(settings));
-            } catch (error) {
-                console.error('Error saving to localStorage:', error);
+            } catch (e) {
+                console.error('Error saving to localStorage:', e);
+                // If parsing failed, create a fresh settings object
+                const settings = { autoSkipAllLectures: this.settings.autoSkipLecture };
+                localStorage.setItem('vuGenie_settings', JSON.stringify(settings));
             }
 
+            // Sync with chrome.storage via custom event
+            window.dispatchEvent(new CustomEvent('vu-genie-settings-update', {
+                detail: {
+                    settings: { autoSkipAllLectures: this.settings.autoSkipLecture }
+                }
+            }));
+
             // Update UI
+            const btn = document.querySelector('[data-action="auto-skip-lecture"]');
+            if (btn) {
+                btn.textContent = this.settings.autoSkipLecture ? 'Stop' : 'Auto Skip All Lectures';
+                btn.classList.toggle('active', this.settings.autoSkipLecture);
+            }
             this.updateStatus(this.settings.autoSkipLecture ?
                 'Auto-skip enabled. Skipping lectures...' :
                 'Auto-skip disabled');
@@ -697,10 +712,32 @@ class VULectureGenie {
             } else {
                 this.showNotification('Auto-skip lectures disabled', 'info');
             }
-
         } catch (error) {
-            console.error("Error in autoSkipLectures:", error);
+            console.error('Error in autoSkipLectures:', error);
             this.showNotification(`❌ Error: ${error.message}`, 'error');
+        }
+    }
+
+    onSettingsUpdated(settings) {
+        const oldAutoSkip = this.settings.autoSkipLecture;
+        this.settings = {
+            ...this.settings,
+            autoSkipLecture: settings.autoSkipAllLectures || false,
+            autoSelect: settings.autoSelect !== false,
+            autoSaveQuiz: settings.autoSaveQuiz !== false
+        };
+
+        // Update UI button text
+        const btn = document.querySelector('[data-action="auto-skip-lecture"]');
+        if (btn) {
+            btn.textContent = this.settings.autoSkipLecture ? 'Stop' : 'Auto Skip All Lectures';
+            btn.classList.toggle('active', this.settings.autoSkipLecture);
+        }
+
+        // If auto-skip was just turned ON, skip the current lecture immediately
+        if (!oldAutoSkip && this.settings.autoSkipLecture) {
+            console.log('Auto-skip enabled via settings sync – skipping current lecture');
+            this.skipLecture();
         }
     }
 

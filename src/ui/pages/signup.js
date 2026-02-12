@@ -80,7 +80,7 @@ registerRoute("signup", () => {
                     navigate('home');
                 }, 100);
             } else {
-                alerts.show('warning', result.message, { bounce: true });
+                alerts.show('warning', result.error, { bounce: true });
             }
         } catch (error) {
             alerts.show('error', error.message, { bounce: true });

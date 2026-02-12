@@ -14,81 +14,105 @@
 </head>
 
 <body class="bg-dark">
-  <!-- Sidebar Overlay -->
-  <div id="sidebarOverlay" class="sidebar-overlay hidden"></div>
-
-  <!-- Sidebar -->
-  <aside id="sidebar" class="sidebar">
-    <div class="sidebar-header d-flex justify-content-between align-center p-3">
-      <span class="fw-bold">VU Empire Genie</span>
-      <button id="closeSidebar" class="btn btn-icon p-0">
-        <img src="../assets/svg/x.svg" alt="x icon" width="30px">
-      </button>
-    </div>
-
-    <nav class="navbar sidebar-nav h-100">
-      <li class="mb-3" id="nav-auth-section">
-        <!-- Auth Section Placeholder -->
-      </li>
-      <li class="mb-1 text-left">
-        <button class="nav-link border-0  fs-2 bg-transparent outline-0" data-route="home">Home</button>
-      </li>
-      <li class="mb-1 text-left">
-        <button class="nav-link border-0  fs-2 bg-transparent outline-0" data-route="pricing">Pricing</button>
-      </li>
-      <li class="mb-1 text-left">
-        <button class="nav-link border-0  fs-2 bg-transparent outline-0" data-route="support">Support</button>
-      </li>
-      <li class="mb-1 text-left">
-        <button class="nav-link border-0  fs-2  fs-2 bg-transparent outline-0" data-route="updates">Updates</button>
-      </li>
-      <li class="mb-1 text-left">
-        <button class="nav-link border-0  fs-2 bg-transparent outline-0" data-route="feedback">Feedback</button>
-      </li>
-    </nav>
-
-    <div class="sidebar-footer position-absolute bottom-0 w-100">
-      <div class="d-flex align-center justify-content-center">
-        <nav class="navbar d-flex align-center mx-auto">
-          <li>
-            <button class="nav-link me-2 border-0 bg-transparent outline-0" data-route="faq">FAQ</button>
-          </li>
-          <li>
-            <button class="nav-link mx-1 border-0 bg-transparent outline-0" data-route="about">About</button>
-          </li>
-          <li>
-            <button class="nav-link mx-1 border-0 bg-transparent outline-0" data-route="privacy">Privacy</button>
-          </li>
-          <li>
-            <button class="nav-link ms-2 border-0 bg-transparent outline-0" data-route="terms">Terms</button>
-          </li>
-        </nav>
-      </div>
-    </div>
-  </aside>
-
   <div class="bg-secondary position-sticky top-0 text-center z-index-2 p-2">
     <div class="d-flex justify-content-between align-center position-relative">
-      <img src="../assets/icons/icon.png" class="logo-icon me-3" alt="VU Empire Genie"
-        style="width: 60px; height: 60px;">
-      <div class="logo-text">
-        <h1 class="h3 mb-0">VU Empire Genie</h1>
-        <div class="tagline text-muted">AI-Powered Study Assistant</div>
+      <div class="d-flex">
+        <img alt="VU Empire Genie Logo" src="../assets/icons/icon.png" width="45" height="45">
+        <div class="d-flex flex-column align-start ms-2">
+          <h1 class="mb-0">
+            <span class="fs-1">
+              VU Empire Genie
+            </span>
+          </h1>
+        </div>
       </div>
-      <button class="menu-icon btn p-0">
-        <img src="../assets/svg/list.svg" alt="menu icon" class="position-absolute right-0 top-1" width="30px">
-      </button>
+      <div id="nav-auth-section" class="position-absolute right-0 top-1">
+        <!-- Authentication Action Buttons Section -->
+      </div>
     </div>
   </div>
 
-  <div class="container pt-2 px-4 pb-4 h-100" id="app-view">
-    <!-- UI Framework will render pages here -->
+  <div class="d-flex justify-content-between align-center position-relative p-2">
+    <div class="d-flex align-center">
+      <img id="student-profile-image" alt="Student Profile" class="rounded-circle" width="45" height="45">
+      <div class="d-flex flex-column align-start ms-2">
+        <h2 class="mb-0">
+          <span id="student-name" class="fs-3"></span>
+        </h2>
+        <div class="tagline text-muted">
+          <span id="student-id" class="fs-3"></span>
+        </div>
+      </div>
+    </div>
+    <div id="current-plan-section" class="navbar">
+      <!-- Current Plan Section -->
+      <span class="nav-link text-white">Free</span>
+    </div>
   </div>
 
+  <main class="main">
+    <div class="container" id="app-view">
+      <!-- UI Framework will render pages here -->
+    </div>
+    <footer class="mt-5 mb-4">
+        <ul class="navbar d-flex py-2 container bg-light">
+          <div class="col-4">
+            <li>
+              <button class="nav-link border-0 bg-transparent outline-0" data-route="faq">FAQ</button>
+            </li>
+            <li>
+              <button class="nav-link border-0 bg-transparent outline-0" data-route="about">About</button>
+            </li>
+            <li>
+              <button class="nav-link border-0 bg-transparent outline-0" data-route="support">Support</button>
+            </li>
+          </div>
+          <div class="col-4">
+            <li>
+              <button class="nav-link border-0 bg-transparent outline-0" data-route="updates">Updates</button>
+            </li>
+            <li>
+              <button class="nav-link border-0 bg-transparent outline-0" data-route="feedback">Feedback</button>
+            </li>
+          </div>
+          <div class="col-4">
+            <li>
+              <button class="nav-link border-0 bg-transparent outline-0" data-route="privacy">Privacy</button>
+            </li>
+            <li>
+              <button class="nav-link border-0 bg-transparent outline-0" data-route="terms">Terms</button>
+            </li>
+          </div>
+        </ul>
+        <div class="fs-5 text-center text-muted pb-4 pt-1 mb-5">
+          Powered by VU Empire • Made with ❤️ for VU Students
+        </div>
+    </footer>
+  </main>
+
   <!-- Footer -->
-  <div class="bg-secondary fs-5 text-center position-fixed bottom-0 text-muted z-index-2 w-100">
-    Powered by VU Empire • Made with ❤️ for VU Students
-  </div>
+  <nav class="bg-secondary position-fixed bottom-0 text-muted z-index-2 w-100 p-2">
+    <ul class="navbar d-flex align-center justify-content-between">
+      <li>
+        <button class="nav-link border-0  fs-2 bg-transparent outline-0 d-flex align-center justify-content-center" data-route="home">
+          <img src="../assets/svg/house.svg" alt="home icon" width="18px">
+          <span class="ms-1">Home</span>
+        </button>
+      </li>
+      <li>
+        <button class="nav-link border-0  fs-2 bg-transparent outline-0 d-flex align-center justify-content-center" data-route="settings">
+          <img src="../assets/svg/gear.svg" alt="settings icon" width="18px">
+          <span class="ms-1">Settings</span>
+        </button>
+      </li>
+      <li>
+        <button class="nav-link border-0  fs-2 bg-transparent outline-0 d-flex align-center justify-content-center" data-route="pricing">
+          <img src="../assets/svg/tag.svg" alt="pricing icon" width="18px">
+          <span class="ms-1">Pricing</span>
+        </button>
+      </li>
+    </ul>
+  </nav>
 
   <div class="alert-container top-right" id="alertContainer"></div>
 

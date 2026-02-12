@@ -41,6 +41,16 @@
     },
     {
       "matches": [
+        "https://vulms.vu.edu.pk/LessonViewer.aspx*"
+      ],
+      "js": [
+        "scripts/content_lecture_isolated.js"
+      ],
+      "run_at": "document_end",
+      "world": "ISOLATED"
+    },
+    {
+      "matches": [
         "https://vulms.vu.edu.pk/Quiz/*",
         "https://vulms.vu.edu.pk/FormativeAssessment/*"
       ],
