@@ -12,6 +12,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+<<<<<<< Updated upstream
     "bcryptjs": "^3.0.3",
     "body-parser": "^1.20.2",
     "cookie-parser": "^1.4.7",
@@ -33,3 +34,14 @@
     "rate-limiter-flexible": "^9.1.0"
   }
 }
+=======
+    "ejs": "^3.1.10",
+    "cors": "^2.8.5",
+    "express": "^5.2.1",
+    "mysql2": "^3.16.0",
+    "dotenv": "^17.2.3",
+    "body-parser": "^1.20.2",
+    "multer": "^1.4.5-lts.1"
+  }
+}
+>>>>>>> Stashed changes

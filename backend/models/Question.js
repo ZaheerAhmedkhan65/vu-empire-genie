@@ -19,6 +19,7 @@ class Question {
         return rows;
     }
 
+<<<<<<< Updated upstream
     static async findByQuestionText(courseId, questionText) {
         const [rows] = await db.query(
             'SELECT * FROM questions WHERE course_id = ? AND question_text = ?',
@@ -42,15 +43,29 @@ class Question {
         const [result] = await db.query(
             'INSERT INTO questions (course_id, question_text, explanation, url, timestamp) VALUES (?, ?, ?, ?, ?)',
             [course_id, question_text, explanation, url, timestamp]
+=======
+    static async create(questionData) {
+        const { course_id, question_text, url, timestamp } = questionData;
+        const [result] = await db.query(
+            'INSERT INTO questions (course_id, question_text, url, timestamp) VALUES (?, ?, ?, ?)',
+            [course_id, question_text, url, timestamp]
+>>>>>>> Stashed changes
         );
         return { question_id: result.insertId, ...questionData };
     }
 
     static async update(id, questionData) {
+<<<<<<< Updated upstream
         const { course_id, question_text, explanation, url, timestamp } = questionData;
         const [result] = await db.query(
             'UPDATE questions SET course_id = ?, question_text = ?, explanation = ?, url = ?, timestamp = ? WHERE question_id = ?',
             [course_id, question_text, explanation, url, timestamp, id]
+=======
+        const { course_id, question_text, url, timestamp } = questionData;
+        const [result] = await db.query(
+            'UPDATE questions SET course_id = ?, question_text = ?, url = ?, timestamp = ? WHERE question_id = ?',
+            [course_id, question_text, url, timestamp, id]
+>>>>>>> Stashed changes
         );
         return result.affectedRows > 0;
     }
@@ -85,6 +100,7 @@ class Question {
         return rows[0];
     }
 
+<<<<<<< Updated upstream
     static async getCourseQuestions(courseCode) {
         const [rows] = await db.query(
             `SELECT 
@@ -131,6 +147,23 @@ class Question {
             ORDER BY q.timestamp DESC
         `, [`%${query}%`, courseCode]);
         return rows;
+=======
+    static async getQuestionStats(questionId) {
+        const [rows] = await db.query(
+            `SELECT 
+                q.question_id,
+                q.question_text,
+                COUNT(sa.answer_id) as total_attempts,
+                SUM(CASE WHEN sa.is_correct THEN 1 ELSE 0 END) as correct_attempts,
+                ROUND((SUM(CASE WHEN sa.is_correct THEN 1 ELSE 0 END) / COUNT(*)) * 100, 2) as correct_percentage
+            FROM questions q
+            LEFT JOIN student_answers sa ON q.question_id = sa.question_id
+            WHERE q.question_id = ?
+            GROUP BY q.question_id`,
+            [questionId]
+        );
+        return rows[0];
+>>>>>>> Stashed changes
     }
 }
 

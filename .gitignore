@@ -1,2 +1,6 @@
 security
 build_assets
+todo.txt
+node_modules
+.env
+DOCS.md
