@@ -121,17 +121,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/quiz', quizRoutes);
 app.use('/api/feedback', feedbackRoutes);
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-    res.status(200).json({
-        status: 'OK',
-        timestamp: new Date().toISOString(),
-        service: 'Quiz API'
-    });
-});
-
 // Error handling middleware
-// In your error handler middleware in config/app.js, update to:
 app.use((err, req, res, next) => {
     console.error('Global error handler:', err);
 
@@ -149,7 +139,7 @@ app.use((err, req, res, next) => {
             title: 'Server Error',
             message: 'Something went wrong on our end',
             error: process.env.NODE_ENV === 'development' ? err.message : '',
-            overallStats: { total_questions: 0, total_courses: 0 }, // Add default stats
+            overallStats: { total_questions: 0, total_courses: 0 },
             currentYear: new Date().getFullYear()
         });
     } else {
@@ -162,7 +152,7 @@ app.use((err, req, res, next) => {
     }
 });
 
-// 404 handler
+// 404
 app.use((req, res) => {
     res.status(404).json({
         success: false,

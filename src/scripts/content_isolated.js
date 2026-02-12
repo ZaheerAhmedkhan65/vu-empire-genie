@@ -1113,20 +1113,20 @@ class VUQuizGenie {
         let solutionHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h3 style="margin: 0; font-size: 20px; display: flex; align-items: center; gap: 10px;">
-                <span style="font-size: 24px;">Quiz Solution</span>
+                <span style="font-size: 24px;">Solution</span>
             </h3>
             <button id="close-solution" style="background: rgba(255,255,255,0.2); border: none; color: white; font-size: 20px; cursor: pointer; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
                 ×
             </button>
         </div>
-        
+
+        <div style="font-weight: bold; margin-bottom: 10px; opacity: 0.9;">Question:</div>
         <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin-bottom: 20px;">
-            <div style="font-weight: bold; margin-bottom: 10px; opacity: 0.9;">Question:</div>
             <div style="line-height: 1.5;">${quizData.question}</div>
         </div>
         
+        <div style="font-weight: bold; margin-bottom: 10px; opacity: 0.9;">Options:</div>
         <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin-bottom: 20px;">
-            <div style="font-weight: bold; margin-bottom: 10px; opacity: 0.9;">Options:</div>
     `;
 
         quizData.options.forEach((opt, index) => {
@@ -1191,9 +1191,9 @@ class VUQuizGenie {
         popup.querySelector('#copy-solution-btn').addEventListener('click', () => {
             const text = this.formatSolutionForCopy(quizData, solution);
             navigator.clipboard.writeText(text).then(() => {
-                popup.querySelector('#copy-solution-btn').innerHTML = '<span>✓</span> Copied!';
+                popup.querySelector('#copy-solution-btn').innerHTML = 'Copied!';
                 setTimeout(() => {
-                    popup.querySelector('#copy-solution-btn').innerHTML = '<span>📋</span> Copy Solution';
+                    popup.querySelector('#copy-solution-btn').innerHTML = 'Copy Solution';
                 }, 2000);
             });
         });
