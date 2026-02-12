@@ -81,4 +81,4 @@ class LoaderManager {
 }
 
 // Initialize
-// const lm = new LoaderManager();
+const lm = new LoaderManager();
