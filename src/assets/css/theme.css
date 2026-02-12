@@ -18,7 +18,9 @@
     --color-light: #F1F2F6;
     /* Light Gray */
     --color-dark: #2F3542;
-    /* Dark Gray */
+    /* White */
+    --colo-white: #FFFFFF;
+    /* White */
     --color-body: #FFFFFF;
     /* Page Background */
     --color-text: #2F3542;
@@ -169,23 +171,27 @@ h5 {
 }
 
 .text-warning {
-    color: var(--color-warning);
+    color: var(--color-warning) !important;
 }
 
 .text-info {
-    color: var(--color-info);
+    color: var(--color-info) !important;
 }
 
 .text-light {
-    color: var(--color-light);
+    color: var(--color-light) !important;
+}
+
+.text-white {
+    color: var(--colo-white) !important;
 }
 
 .text-dark {
-    color: var(--color-dark);
+    color: var(--color-dark) !important;
 }
 
 .text-muted {
-    color: var(--color-muted);
+    color: var(--color-muted) !important;
 }
 
 .text-center {
@@ -1574,7 +1580,7 @@ textarea:focus {
 }
 
 .navbar .nav-link:hover {
-    color: var(--color-primary);
+    color: var(--color-primary) !important;
     text-decoration: underline;
 }
 
