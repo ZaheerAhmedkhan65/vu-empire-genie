@@ -167,7 +167,6 @@ async function initSettingsPage() {
             updateSettingsUI(updatedSettings);
         });
 
-        console.log('Settings initialized');
     } catch (error) {
         console.error('Error initializing settings page:', error);
     }

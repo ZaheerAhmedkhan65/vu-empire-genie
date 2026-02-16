@@ -74,7 +74,6 @@ registerRoute("signin", (params = {}) => {
                   navigate(redirectTo);
                 }, 100);
             } else {
-              console.log(result);
               alerts.show('warning', result.error, { bounce: true });
             }
         } catch (error) {

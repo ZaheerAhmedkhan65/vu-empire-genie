@@ -39,7 +39,8 @@ Promise.all([
     import("../pages/signin.js"),
     import("../pages/signup.js"),
     import("../pages/dashboard.js"),
-    import("../pages/settings.js")
+    import("../pages/settings.js"),
+    import("../pages/history.js")
 ]).then(() => {
     // Register any pending routes and start with home page
     registerPendingRoutes();

@@ -1,5 +1,5 @@
 // scripts/content_main.js
-console.log('VU Empire Genie (MAIN World) - Lecture Mode - FIXED');
+console.log('VU Empire Genie - Lecture Mode');
 
 class VULectureGenie {
     constructor() {
@@ -34,11 +34,8 @@ class VULectureGenie {
         await this.waitForPageReady();
         this.injectUI();
 
-        console.log('Lecture Genie initialized with settings:', this.settings);
-
         // Auto-skip lecture if enabled
         if (this.settings.autoSkipLecture) {
-            console.log('Auto-skip lectures enabled. Skipping current lecture...');
             await this.skipLecture();
         }
     }
@@ -72,11 +69,11 @@ class VULectureGenie {
                 <div class="vu-genie-content-wrapper">
                     <div class="vu-genie-content">
                         <button class="vu-btn ${this.settings.autoSkipLecture ? 'active' : ''}" data-action="auto-skip-lecture">
-                           ${this.settings.autoSkipLecture ? 'Stop' : 'Auto Skip All Lectures'}
+                           ${this.settings.autoSkipLecture ? 'Stop' : 'Auto Mark All Lectures'}
                         </button>
 
                         <button class="vu-btn primary" data-action="skip-lecture">
-                            Skip This Lecture
+                            Mark This Lecture
                         </button>
                     </div>
                     <button class="vu-genie-close">×</button>
@@ -261,7 +258,6 @@ class VULectureGenie {
 
             const elapsed = Date.now() - startTime;
             this.updateStatus(`Completed in ${elapsed}ms`);
-            console.log(`✅ Lecture skipped in ${elapsed}ms`);
 
         } catch (error) {
             console.error("Error in skipLecture:", error);
@@ -271,16 +267,12 @@ class VULectureGenie {
     }
 
     updateAllTabUIsInstantly() {
-        console.log("Updating all tab UIs instantly...");
-
         const allTabElements = document.querySelectorAll('a.nav-link[id^="tabHeader"]');
 
         for (const tabElement of allTabElements) {
             const tabId = tabElement.id.replace('tabHeader', '');
             this.markTabAsCompleted(tabId);
         }
-
-        console.log(`✅ Updated ${allTabElements.length} tab UIs`);
     }
 
     markTabAsCompleted(tabId) {
@@ -314,10 +306,7 @@ class VULectureGenie {
     }
 
     async saveAllTabsWith85Percent() {
-        console.log("Saving all tabs with 85% watched duration...");
-
         if (typeof PageMethods?.SaveStudentVideoLog !== 'function') {
-            console.log("PageMethods not available");
             return;
         }
 
@@ -330,11 +319,8 @@ class VULectureGenie {
             const data = this.extractTabDataWith85Percent(tabId);
             if (data) {
                 tabDataArray.push(data);
-                console.log(`Tab ${tabId}: ${data.tabName} - ${data.totalDuration}s total, ${data.watchedDuration}s watched (${data.percentage}%)`);
             }
         }
-
-        console.log(`Found ${tabDataArray.length} tabs to save`);
 
         // Save each tab with 85% watched duration
         const savePromises = tabDataArray.map(tabData =>
@@ -343,8 +329,6 @@ class VULectureGenie {
 
         // Wait for saves to complete
         await Promise.allSettled(savePromises);
-
-        console.log("All save requests completed");
     }
 
     extractTabDataWith85Percent(tabId) {
@@ -386,8 +370,6 @@ class VULectureGenie {
                 watchedDuration = Math.round(totalDuration * 0.85);
                 percentage = 85;
 
-                console.log(`Video ${tabId}: Total=${totalDuration}s, Watched=${watchedDuration}s (${percentage}%)`);
-
             } else if (typeFlag === -2) { // Assessment
                 // Assessments: mark as 90% completed
                 totalDuration = 300; // 5 minutes total
@@ -426,8 +408,6 @@ class VULectureGenie {
     async saveTabWith85Percent(tabData) {
         return new Promise((resolve) => {
             try {
-                console.log(`Saving tab ${tabData.tabId} with ${tabData.percentage}% watched...`);
-
                 // Set timeout
                 const timeout = setTimeout(() => {
                     console.warn(`Timeout saving tab ${tabData.tabId}`);
@@ -448,7 +428,6 @@ class VULectureGenie {
                     window.location.href,
                     (result) => {
                         clearTimeout(timeout);
-                        console.log(`✅ Tab ${tabData.tabId} saved: ${tabData.watchedDuration}/${tabData.totalDuration}s (${tabData.percentage}%)`);
                         resolve(true);
                     },
                     (error) => {
@@ -477,11 +456,10 @@ class VULectureGenie {
                     const playerDuration = window.CurrentPlayer.getDuration();
                     if (playerDuration && playerDuration > 0) {
                         duration = playerDuration;
-                        console.log(`✅ YouTube video duration: ${duration}s`);
                     }
                 }
             } catch (youtubeError) {
-                console.log("YouTube player not available or error:", youtubeError.message);
+                console.error("YouTube player not available or error:", youtubeError.message);
             }
 
             // SAFELY check VU video player
@@ -492,11 +470,10 @@ class VULectureGenie {
                     const vuDuration = window.CurrentLVPlayer.duration;
                     if (vuDuration && vuDuration > 0) {
                         duration = vuDuration;
-                        console.log(`✅ VU video duration: ${duration}s`);
                     }
                 }
             } catch (vuError) {
-                console.log("VU video player not available or error:", vuError.message);
+                console.error("VU video player not available or error:", vuError.message);
             }
 
             // SAFELY check HTML5 video element
@@ -506,10 +483,9 @@ class VULectureGenie {
                     videoElement.duration &&
                     videoElement.duration > 0) {
                     duration = videoElement.duration;
-                    console.log(`✅ HTML5 video duration: ${duration}s`);
                 }
             } catch (html5Error) {
-                console.log("HTML5 video not available or error:", html5Error.message);
+                console.error("HTML5 video not available or error:", html5Error.message);
             }
 
             // Check for duration in hidden fields
@@ -519,17 +495,15 @@ class VULectureGenie {
                     const parsed = parseFloat(durationField.value);
                     if (parsed > 0) {
                         duration = parsed;
-                        console.log(`✅ Video duration from hidden field: ${duration}s`);
                     }
                 }
             } catch (fieldError) {
-                console.log("Duration field not available or error:", fieldError.message);
+                console.error("Duration field not available or error:", fieldError.message);
             }
 
             // If still no duration detected, use intelligent defaults
             if (duration <= 0) {
                 duration = this.estimateDurationFromTabName(tabId);
-                console.log(`📊 Estimated duration from tab name: ${duration}s`);
             }
 
             return Math.max(duration, 60); // Minimum 60 seconds
@@ -571,8 +545,6 @@ class VULectureGenie {
     }
 
     async triggerCompletionAndNavigate() {
-        console.log("Triggering completion...");
-
         // Try to trigger lesson completion
         this.triggerCompletion();
 
@@ -597,7 +569,6 @@ class VULectureGenie {
                 const btn = document.querySelector('#btnComplete, #btnMarkComplete, #btnFinish');
                 if (btn && !btn.disabled) {
                     btn.click();
-                    console.log("Clicked completion button");
                     return true;
                 }
                 return false;
@@ -607,7 +578,6 @@ class VULectureGenie {
                 if (typeof UpdateTabStatus === 'function') {
                     try {
                         UpdateTabStatus("Completed", "0", "-2");
-                        console.log("Called UpdateTabStatus");
                         return true;
                     } catch (e) {
                         return false;
@@ -627,11 +597,8 @@ class VULectureGenie {
     }
 
     async tryNavigateToNext() {
-        console.log("Attempting navigation...");
-
         const nextButton = document.querySelector('#lbtnNextLesson');
         if (!nextButton) {
-            console.log("Next button not found");
             return false;
         }
 
@@ -649,7 +616,6 @@ class VULectureGenie {
             await new Promise(resolve => setTimeout(resolve, 500));
 
             if (window.location.href !== currentUrl) {
-                console.log("Navigation successful via click");
                 return true;
             }
         }
@@ -668,7 +634,6 @@ class VULectureGenie {
         if (nextButton && nextButton.disabled) {
             nextButton.disabled = false;
             nextButton.classList.remove('disabled');
-            console.log("Enabled Next button");
         }
     }
 
@@ -736,7 +701,6 @@ class VULectureGenie {
 
         // If auto-skip was just turned ON, skip the current lecture immediately
         if (!oldAutoSkip && this.settings.autoSkipLecture) {
-            console.log('Auto-skip enabled via settings sync – skipping current lecture');
             this.skipLecture();
         }
     }

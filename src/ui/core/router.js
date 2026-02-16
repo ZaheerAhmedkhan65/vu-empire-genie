@@ -11,7 +11,6 @@ export class Router {
     }
 
     register(path, component, options = {}) {
-        console.log(`Registering route: ${path}, component: ${component}`);
         this.routes[path] = component;
         
         // Mark route as protected if specified
@@ -31,7 +30,6 @@ export class Router {
             // Import auth manager dynamically to avoid circular imports
             import('./auth.js').then(({ authManager }) => {
                 if (!authManager.isAuthenticated()) {
-                    console.log('Route requires authentication, redirecting to signin');
                     this.navigate('signin', { redirectTo: path });
                     return;
                 }
@@ -47,7 +45,6 @@ export class Router {
 
     performNavigation(path, params = {}) {
         const Screen = this.routes[path];
-        console.log(`Navigating to ${path}`);
         if (!Screen) throw new Error(`Route ${path} not found`);
 
         this.outlet.innerHTML = "";
@@ -64,7 +61,6 @@ export class Router {
             if (link) {
                 e.preventDefault();
                 const route = link.dataset.route;
-                console.log(`Global navigation to ${route}`);
                 this.navigate(route);
             }
         });
@@ -77,7 +73,6 @@ export class Router {
             if (link) {
                 e.preventDefault();
                 const route = link.dataset.route;
-                console.log(`Screen navigation to ${route}`);
                 this.navigate(route);
             }
         });
