@@ -46,26 +46,25 @@ class QuizService {
                     course.course_id,
                     normalizedQuestion
                 );
-
+                
                 if (!existingQuestion) {
                     // --- Create question ---
                     const question = await Question.create({
                         course_id: course.course_id,
-                        question_text: record.question.trim(),
+                        question_text: normalize(record.question),
                         explanation: record.explanation || '',
                         url: record.url || '',
                         timestamp: record.timestamp ? new Date(record.timestamp) : new Date()
                     });
 
                     // --- Prepare options ---
-                    const optionsData = record.options.map((opt, index) => ({
+                    const optionsData = record.options.map((opt, idx) => ({
                         question_id: question.question_id,
                         letter: opt.letter,
-                        option_text: opt.option_text,      // fixed mapping
-                        index: index + 1,                  // optional: store order
-                        is_correct: !!opt.is_correct       // fixed mapping
+                        option_text: opt.text,
+                        index: idx + 1,
+                        is_correct: !!opt.isCorrect
                     }));
-
                     // --- Insert options ---
                     await Option.createMultiple(optionsData);
 

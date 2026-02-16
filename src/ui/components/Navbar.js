@@ -81,7 +81,6 @@ function setupAuthEventDelegation(container) {
         if (link) {
             e.preventDefault();
             const route = link.dataset.route;
-            console.log(`Auth navigation to ${route}`);
             navigate(route);
         }
     });
@@ -100,7 +99,6 @@ export function initNavbar() {
     document.querySelectorAll("[data-route]").forEach(link => {
         link.addEventListener("click", (e) => {
             e.preventDefault();
-            console.log(`Navigating to ${link.dataset.route}`);
             navigate(link.dataset.route);
         });
     });

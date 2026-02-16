@@ -1,5 +1,4 @@
 // scripts/readers/user_info.js
-// Enhanced API for cross-page student info extraction
 class StudentInfoExtractor {
     constructor() {
         this.cache = new Map();

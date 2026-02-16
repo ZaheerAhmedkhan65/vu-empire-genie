@@ -4,7 +4,6 @@
 // Function to extract and send student info
 async function extractAndSendStudentInfo() {
   try {
-    console.log("extracting info")
     // Get existing data from storage
     const storedData = await chrome.storage.local.get(['studentInfo']);
     const existingInfo = storedData.studentInfo || {};
@@ -16,15 +15,13 @@ async function extractAndSendStudentInfo() {
       // Merge existing and current data intelligently
       const mergedInfo = mergeStudentInfo(existingInfo, currentInfo);
 
-      console.log('Merged student info:', mergedInfo);
-
       // Send to background script
       chrome.runtime.sendMessage({
         type: 'EXTRACT_STUDENT_INFO',
         studentInfo: mergedInfo
       }, (response) => {
         if (response && response.success) {
-          console.log('Student info saved successfully');
+          // Optional: show success notification
         } else {
           console.warn('Failed to save student info:', response?.error);
         }

@@ -40,7 +40,6 @@ class SettingsManager {
         this.setupChangeListener();
 
         this.initialized = true;
-        console.log('SettingsManager initialized with:', this.settings);
     }
 
     async loadFromStorage() {
@@ -53,7 +52,6 @@ class SettingsManager {
                 ...result
             };
 
-            console.log('Settings loaded from storage:', this.settings);
         } catch (error) {
             console.error('Error loading settings:', error);
         }
@@ -69,7 +67,6 @@ class SettingsManager {
             }
 
             await chrome.storage.sync.set(this.settings);
-            console.log('Settings saved to storage:', this.settings);
 
             // Notify all listeners
             this.notifyListeners();
@@ -107,14 +104,13 @@ class SettingsManager {
                                 if (typeof genieInstance.onSettingsUpdated === 'function') {
                                     genieInstance.onSettingsUpdated(settings);
                                 }
-                                console.log('Updated active genie instance with new settings');
                             }
                         },
                         args: [this.settings],
                         world: 'MAIN'
                     });
                 } catch (error) {
-                    console.log(`Could not update tab ${tab.id}:`, error.message);
+                    console.error(`Could not update tab ${tab.id}:`, error.message);
                 }
             }
         } catch (error) {
@@ -129,7 +125,6 @@ class SettingsManager {
                     this.settings[key] = changes[key].newValue;
                 });
 
-                console.log('Settings changed:', changes);
                 this.notifyListeners();
             }
         });
