@@ -2,6 +2,7 @@ import { registerRoute } from "../core/router.js";
 
 registerRoute("terms", () => {
     const container = document.createElement('div');
+  container.classList.add('container','app-container');
     container.innerHTML = `
     <div class="fs-1 mb-3">Terms of Service</div>
     
@@ -72,7 +73,7 @@ registerRoute("terms", () => {
       </p>
     </div>
 
-    <div class="mb-3">
+    <div class="mt-0">
       <h4 class="fs-4 mb-2">7. Modifications</h4>
       <p class="text-muted">
         VU Empire Genie may revise these terms of service for its extension at 

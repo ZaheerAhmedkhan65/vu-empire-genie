@@ -1,3 +1,4 @@
+//ui/components/Navbar.js
 import { startRouter, navigate } from "../core/router.js";
 import { appView } from "../../views/js/appView.js";
 
@@ -7,13 +8,13 @@ function updateNavbarContent(user) {
     currentPlan.innerHTML = `
     <span class="badge badge-primary fs-4 p-1">
         ${user.subscriptionPlan || "Free"}
-    </span>`
+    </span>`   
 }
 
 export function initNavbar() {
     // Set up initial sidebar content
     updateNavbarContent({
-        "subscriptionPlan": "Pro"
+        "subscriptionPlan": "Free"
     });
 
     // Set up event delegation for navigation links

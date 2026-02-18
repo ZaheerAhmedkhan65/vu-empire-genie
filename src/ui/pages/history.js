@@ -2,6 +2,7 @@ import { registerRoute } from "../core/router.js";
 
 registerRoute("history", () => {
     const container = document.createElement('div');
+    container.classList.add('container','app-container');
     container.innerHTML = `
         <div class="fs-1 mb-3">Quiz History</div>
         <table class="table table-bordered  table-striped table-hover w-100">

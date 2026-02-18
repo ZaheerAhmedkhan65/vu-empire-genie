@@ -23,14 +23,13 @@ body::-webkit-scrollbar {
     overflow: auto;
 }
 
-#app-view {
-    min-height: 550px;
+#app-view .app-container {
+    min-height: 57vh;
 }
 
 .main {
     overflow-y: auto;
     overflow-x: hidden;
-    height: 100%;
 }
 
 #app::-webkit-scrollbar {

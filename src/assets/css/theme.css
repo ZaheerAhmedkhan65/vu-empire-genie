@@ -2307,11 +2307,17 @@ textarea:focus {
 }
 
 .navbar .nav-link.active {
-    color: var(--color-primary);
+    color: var(--color-primary) !important;
 }
 
 .navbar .nav-link.active:hover {
-    color: var(--color-primary);
+    color: var(--color-primary) !important;
+}
+
+.navbar .btn-outline-primary.active{
+    background-color: var(--color-primary);
+    color: #fff;
+    border-color: var(--color-primary);
 }
 
 /* =========================

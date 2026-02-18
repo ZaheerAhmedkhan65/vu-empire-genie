@@ -1,10 +1,8 @@
 // views/js/AlertManager.js
-console.log('AlertManager is loaded');
 class AlertManager {
     constructor(containerId = 'alertContainer', defaultDuration = 4000) {
         this.container = document.getElementById(containerId);
         this.defaultDuration = defaultDuration;
-        console.log('AlertManager initialized');
     }
 
     show(type = 'info', message = '', options = {}) {
