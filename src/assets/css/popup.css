@@ -80,7 +80,7 @@ body::-webkit-scrollbar {
 }
 
 .pricing-btn {
-    margin: 5px 15px 15px;
+    margin: 5px 4px 5px;
 }
 
 .free {
@@ -88,6 +88,21 @@ body::-webkit-scrollbar {
 }
 
 .pro {
-    background-color: #702cf962;
-    color: #fff;
+    background-color: #f8f9fa;
+    border: 5px solid #712cf9;
+}
+
+.pro::before{
+    content: "Most Popular";
+    width: 30px;
+    height: 18px;
+    transform: rotate(45deg);
+    position: relative;
+    top: -22px;
+    left: 40px;
+    background-color: #702cf9;
+    color: white;
+    font-size: 14px;
+    padding: 2px 5px;
+    border-radius: 3px;
 }

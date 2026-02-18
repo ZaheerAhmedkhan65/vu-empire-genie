@@ -1,3 +1,4 @@
+/* theme.css */
 /* -------------------------
     VARIABLES
 ------------------------- */
@@ -19,7 +20,7 @@
     /* Light Gray */
     --color-dark: #2F3542;
     /* White */
-    --colo-white: #FFFFFF;
+    --color-white: #FFFFFF;
     /* White */
     --color-body: #FFFFFF;
     /* Page Background */
@@ -191,7 +192,7 @@ h5 {
 }
 
 .text-white {
-    color: var(--colo-white) !important;
+    color: var(--color-white) !important;
 }
 
 .text-dark {
@@ -1823,6 +1824,17 @@ h5 {
     color: #fff;
 }
 
+.btn-outline-info {
+    color: var(--color-info);
+    border-color: var(--color-info);
+    background: transparent;
+}
+
+.btn-outline-info:hover {
+    background-color: var(--color-info);
+    color: #fff;
+}
+
 /* -------------------------
    BUTTON GROUP
 ------------------------- */
@@ -2112,24 +2124,26 @@ h5 {
 
 .accordion-button {
     width: 100%;
+    color: var(--color-white);
     padding: var(--sp-3);
     background: var(--bg-light);
     border: none;
     text-align: left;
     cursor: pointer;
     font-weight: 500;
+    font-size: var(--font-size-lg);
     transition: background 0.2s;
 }
 
 .accordion-button:hover {
-    background: var(--color-primary);
-    color: #fff;
+    background: var(--color-primary) !important;
 }
 
 .accordion-body {
     padding: var(--sp-3);
     display: none;
     background: #fff;
+    font-size: var(--font-size-md);
 }
 
 .accordion-body.show {
@@ -2158,6 +2172,76 @@ textarea:focus {
     outline: none;
     border-color: var(--color-primary);
     box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
+}
+
+.form-label {
+    display: inline-block;
+    margin-bottom: var(--sp-1);
+    font-weight: 500;
+}
+
+.form-control {
+    display: block;
+    width: 100%;
+    padding: var(--sp-2);
+    margin-bottom: var(--sp-3);
+    border: var(--border-width) solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    background: var(--bg-light);
+    color: var(--color-text);
+    font-size: var(--font-size-md);
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
+}
+
+.form-select {
+    display: block;
+    width: 100%;
+    padding: var(--sp-2);
+    margin-bottom: var(--sp-3);
+    border: var(--border-width) solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    background: var(--bg-light);
+    color: var(--color-text);
+    font-size: var(--font-size-md);
+}
+
+.form-select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
+}
+
+.form-check-label {
+    cursor: pointer;
+}
+
+.form-check-input {
+    cursor: pointer;
+}
+
+.form-check-input:checked {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.form-check-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
+}
+
+.form-check-input:active {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.form-check-input:checked[type=radio] {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='2' fill='%23fff'/%3e%3c/svg%3e");
 }
 
 /* -------------------------

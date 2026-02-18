@@ -31,6 +31,17 @@
   "content_scripts": [
     {
       "matches": [
+        "https://vulms.vu.edu.pk/*"
+      ],
+      "css": [
+        "assets/css/floating.css",
+        "assets/css/alert.css",
+        "assets/css/loader.css"
+      ],
+      "run_at": "document_start"
+    },
+    {
+      "matches": [
         "https://vulms.vu.edu.pk/LessonViewer.aspx*"
       ],
       "js": [
@@ -68,6 +79,7 @@
       "js": [
         "scripts/content_isolated.js"
       ],
+      "type": "module",
       "run_at": "document_end",
       "world": "ISOLATED",
       "all_frames": true

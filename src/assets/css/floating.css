@@ -1,0 +1,162 @@
+:root {
+    --primary-bg: #712cf9;
+    --primary-green: #10b981;
+    --secondary-bg: #bd8b35;
+    --danger-red: red;
+    --white: #ffffff;
+    --black: #000000;
+    --border-light: rgba(255, 255, 255, 0.1);
+    --shadow-dark: rgba(0, 0, 0, 0.3);
+    --shadow-hover: rgba(0, 0, 0, 0.2);
+}
+
+/* ===============================
+   Main UI Wrapper
+================================= */
+#vu-genie-ui {
+    min-width: 300px;
+    position: fixed;
+    bottom: 20px;
+    right: calc(50% - 175px);
+    z-index: 10000;
+    font-family: 'Poppins', Arial, sans-serif;
+}
+
+/* ===============================
+   Container
+================================= */
+.vu-genie-container {
+    background: var(--white);
+    backdrop-filter: blur(10px);
+    border-radius: 33px;
+    padding: 5px 10px;
+    min-width: 250px;
+    color: var(--white);
+    box-shadow: 0 4px 20px var(--shadow-dark);
+    animation: slideUp 0.3s ease;
+    position: relative;
+}
+
+/* ===============================
+   Utility Classes
+================================= */
+.show {
+    display: block !important;
+}
+
+.hide {
+    display: none !important;
+}
+
+/* ===============================
+   Animation
+================================= */
+@keyframes slideUp {
+    from {
+        transform: translateY(100px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* ===============================
+   Content Layout
+================================= */
+.vu-genie-content-wrapper,
+.vu-genie-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.vu-genie-content {
+    gap: 10px;
+}
+
+/* ===============================
+   Buttons
+================================= */
+.vu-btn {
+    padding: 5px 15px;
+    border: none;
+    border: 1px solid;
+    border-radius: 33px;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: 400;
+    transition: all 0.2s ease;
+}
+
+.vu-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px var(--shadow-hover);
+}
+
+.vu-btn.primary {
+    background: var(--primary-bg);
+    color: var(--white);
+}
+
+.vu-btn.secondary {
+    background: var(--primary-green);
+    color: var(--white);
+}
+
+.vu-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ===============================
+   Positioning
+================================= */
+.position-relative {
+    position: relative
+}
+
+#alertContainer {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    z-index: 10000;
+}
+
+/* ===============================
+   Solution Alert
+================================= */
+#vu-genie-quiz-solution {
+    position: absolute;
+    bottom: 100%;
+    right: -25px;
+    color: rgb(51, 51, 51);
+    background: rgba(66, 153, 225, 0.2);
+    padding: 5px;
+    border-radius: 0;
+    box-shadow: rgba(0, 0, 0, 0.3) 0px 0px 33px;
+    z-index: 10001;
+    width: 350px;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-bottom: 5px;
+}
+
+#close-solution {
+    background: rgba(255, 255, 255, 0.5);
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    width: 30px;
+    height: 23px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    right: -5px;
+    top: -20px;
+}
