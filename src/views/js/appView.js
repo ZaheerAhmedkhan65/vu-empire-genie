@@ -24,19 +24,20 @@ async function loadStudentInfo() {
 }
 
 function displayStudentInfo(studentInfo) {
-    const profileImage = document.getElementById('student-profile-image');
-    const studentId = document.getElementById('student-id');
-    const studentName = document.getElementById('student-name');
+    const studentProfile = document.querySelector("#student-profile");
+    const profileImages = document.querySelectorAll('.student-profile-image');
 
     // Set profile image
     if (studentInfo.profileImage) {
-        profileImage.src = studentInfo.profileImage;
+        profileImages.forEach(img => {
+            img.src = studentInfo.profileImage;
+            img.style.display = 'block';
+        });
+        studentProfile.innerHTML = `<img alt="Student Profile" src="${studentInfo.profileImage}" class="rounded-circle" width="45" height="45">`;
     } else {
-        profileImage.style.display = 'none';
+        profileImages.forEach(img => {
+            img.style.display = 'none';
+        });
+        studentProfile.innerHTML = '';
     }
-
-    // Set student details
-    studentId.textContent = studentInfo.studentId || 'Not available';
-    studentName.textContent = studentInfo.name || 'Not available';
-
 }

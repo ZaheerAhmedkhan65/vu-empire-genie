@@ -14,8 +14,6 @@ class AlertManager {
         this.defaultDuration = defaultDuration;
     }
 
-    
-
     show(type = 'info', message = '', options = {}) {
         const alert = document.createElement('div');
         alert.className = `alert-m ${type}`;

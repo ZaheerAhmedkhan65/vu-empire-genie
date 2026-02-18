@@ -384,7 +384,7 @@ class VUQuizGenie {
         try {
             switch (action) {
                 case 'solve-with-ai':
-                    this.disableButton(button, 'Solving...');
+                    this.disableButton(button, 'Solving Question...');
                     await this.solveWithAI();
                     break;
                 case 'copy-quiz':
@@ -416,7 +416,6 @@ class VUQuizGenie {
         try {
             // Extract quiz data
             const quizData = await this.ensureFreshCache();
-            console.log('Extracted quiz data:', quizData);
             if (!quizData || !quizData.question || quizData.options.length === 0) {
                 vu_alerts.show('error', 'Could not extract quiz question', { bounce: true });
                 return;
@@ -1026,58 +1025,62 @@ class VUQuizGenie {
     }
     
     displayQuizSolution(quizData, solution) {
-        const popup = document.createElement('div');
         const container = document.querySelector(".vu-genie-container");
+        // Remove any existing solution popup
+        const existing = document.getElementById('vu-genie-quiz-solution');
+        if (existing) existing.remove();
+
+        const popup = document.createElement('div');
         popup.id = 'vu-genie-quiz-solution';
 
-        let solutionHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; padding: 0 10px;">
-    `;
-
-        //  Correct Answer Section
+        // Build header with correct answer(s) and close button
+        let headerContent = '';
         if (solution.correctAnswers.length > 0) {
-            solutionHTML += `
-            <div style="padding: 0 5px 0 0">
-                <div style="font-size: 22px; font-weight: bold;">
-                    ${solution.correctAnswers.map(letter => {
+            headerContent = solution.correctAnswers.map(letter => {
                 const option = quizData.options.find(opt => opt.letter === letter);
-                        return `Option ${letter}: <span style="font-whight:600; color:#10b981;">${option ? option.text : letter}</span>`;
-            }).join('<br>')}
-                </div>
-            </div>
-        `;
+                return `Option ${letter} : <span style="font-weight:600; color:#10b981;">${option ? option.text : letter}</span>`;
+            }).join('<br>');
         }
 
-        solutionHTML += `
-            <button id="close-solution" style="background: rgba(255,255,255,0.5); border: none; font-size: 20px; cursor: pointer; width: 30px; height: 25px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                ×
-            </button>
+        popup.innerHTML = `
+        <div class="solution-header">
+            <div class="solution-title">${headerContent}</div>
+            <button id="close-solution" class="toggle-btn">×</button>
         </div>
-        `;
-
-        //  Explanation Section
-        if (solution.explanation) {
-            solutionHTML += `
-            <div style="padding:0 10px 5px;">
+        <div class="solution-content">
+            ${solution.explanation ? `
                 <div style="font-weight: bold; margin-bottom: 5px;">Explanation :</div>
                 <div style="line-height: 1.5;">${solution.explanation}</div>
-            </div>
-        `;
-        }
+            ` : ''}
+        </div>
+    `;
 
-        popup.innerHTML = solutionHTML;
         container.appendChild(popup);
 
-        popup.querySelector('#close-solution').addEventListener('click', () => {
-            popup.remove();
+        const closeBtn = popup.querySelector('#close-solution');
+        closeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            popup.classList.toggle('collapsed');
+            closeBtn.textContent = popup.classList.contains('collapsed') ? '▲' : '×';
         });
 
-        document.addEventListener('keydown', function closeOnEscape(e) {
-            if (e.key === 'Escape') {
-                popup.remove();
-                document.removeEventListener('keydown', closeOnEscape);
+        // Optional: click on collapsed area expands
+        popup.addEventListener('click', (e) => {
+            if (popup.classList.contains('collapsed') && e.target === popup) {
+                popup.classList.remove('collapsed');
+                closeBtn.textContent = '×';
             }
         });
+
+        // Escape key collapses instead of removing
+        const escapeHandler = (e) => {
+            if (e.key === 'Escape') {
+                popup.classList.add('collapsed');
+                closeBtn.textContent = '▲';
+                document.removeEventListener('keydown', escapeHandler);
+            }
+        };
+        document.addEventListener('keydown', escapeHandler);
     }
 
 

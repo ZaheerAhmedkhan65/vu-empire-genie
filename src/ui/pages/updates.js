@@ -2,6 +2,7 @@ import { registerRoute } from "../core/router.js";
 
 registerRoute("updates", () => {
     const container = document.createElement('div');
+  container.classList.add('container','app-container');
     container.innerHTML = `
     <div class="fs-1 mb-3">Updates</div>
     
@@ -11,7 +12,7 @@ registerRoute("updates", () => {
       </p>
     </div>
 
-    <div class="card mb-3 bg-transparent border-0">
+    <div class="card bg-transparent border-0">
       <div class="card-header bg-primary text-white p-2 mb-4 rounded">
         <h5 class="mb-0">Latest Release: v1.2.0</h5>
         <small>January 2026</small>

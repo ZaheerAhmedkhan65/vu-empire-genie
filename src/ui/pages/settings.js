@@ -1,16 +1,26 @@
 // ui/pages/settings.js
 import { registerRoute } from "../core/router.js";
 
+const CHECKBOX_IDS = [
+  'autoSelect', 'autoSaveQuiz', 'enableCopyPaste',
+  'autoSkipAllLectures', 'showSolution', 'autoSolve',
+  'autoSaveAfterSolve'
+];
+
+// Module-level flag to add the external change listener only once
+let externalListenerAdded = false;
+
 registerRoute("settings", () => {
-    const container = document.createElement('div');
-    container.innerHTML = `
+  const container = document.createElement('div');
+  container.classList.add('container', 'app-container');
+  container.innerHTML = `
     <div class="fs-1 mb-3">Settings</div>
 
-    <!-- API Key Settings -->
+    <!-- API Key Section -->
     <div class="py-1">
       <div class="input-group mb-3">
-        <div class="d-flex align-center gap-2">
-          <label class="form-label" for="apiKey">Gemini API Key</label>
+        <div class="d-flex align-center gap-2 w-100">
+          <label class="form-label" for="apiKey">Google AI Studio Key</label>
           <div id="api-status" class="api-status">
             <div id="api-status-message"
               class="rounded-circle d-flex justify-content-center align-center bg-secondary status-badge">
@@ -18,7 +28,10 @@ registerRoute("settings", () => {
             </div>
           </div>
         </div>
-        <input type="password" id="apiKey" class="form-control" placeholder="Enter your Google AI Studio API key">
+        <div class="d-flex align-center mb-2 position-relative">
+          <input type="password" id="apiKey" class="form-control m-0 py-1" placeholder="Enter your Google AI Studio API key">
+          <button class="btn btn-sm btn-primary position-absolute right-0 py-2" id="saveApiKeyBtn">Save Key</button>
+        </div>
         <small class="text-muted">
           <a href="https://makersuite.google.com/app/apikey" target="_blank" class="text-info">
             Get API key from Google AI Studio ↗
@@ -27,237 +40,127 @@ registerRoute("settings", () => {
       </div>
     </div>
 
-    <!-- Feature Settings -->
-    <div class="py-1">
-      <div class="col-12 mb-2">
-        <div class="toggle-item d-flex justify-content-between align-items-center">
-          <div class="toggle-label d-flex align-items-center">
-            <span class="toggle-text">Auto-select Quiz Answer</span>
+    <!-- Feature Settings (auto-save on toggle) -->
+    <div class="py-1" id="checkbox-container">
+      ${CHECKBOX_IDS.map(id => `
+        <div class="col-12 mb-2">
+          <div class="toggle-item d-flex justify-content-between align-items-center">
+            <div class="toggle-label d-flex align-items-center">
+              <span class="toggle-text">${formatLabel(id)}</span>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="${id}" checked>
+              <span class="slider"></span>
+            </label>
           </div>
-          <label class="toggle">
-            <input type="checkbox" id="autoSelect" checked>
-            <span class="slider"></span>
-          </label>
         </div>
-      </div>
-      <div class="col-12 mb-2">
-        <div class="toggle-item d-flex justify-content-between align-items-center">
-          <div class="toggle-label d-flex align-items-center">
-            <span class="toggle-text">Auto-save Quiz Question</span>
-          </div>
-          <label class="toggle">
-            <input type="checkbox" id="autoSaveQuiz" checked>
-            <span class="slider"></span>
-          </label>
-        </div>
-      </div>
-      <div class="col-12 mb-2">
-        <div class="toggle-item d-flex justify-content-between align-items-center">
-          <div class="toggle-label d-flex align-items-center">
-            <span class="toggle-text">Enable GDBs Copy-Paste</span>
-          </div>
-          <label class="toggle">
-            <input type="checkbox" id="enableCopyPaste" checked>
-            <span class="slider"></span>
-          </label>
-        </div>
-      </div>
-      <div class="col-12 mb-2">
-        <div class="toggle-item d-flex justify-content-between align-items-center">
-          <div class="toggle-label d-flex align-items-center">
-            <span class="toggle-text">Auto-skip Lectures</span>
-          </div>
-          <label class="toggle">
-            <input type="checkbox" id="autoSkipAllLectures" checked>
-            <span class="slider"></span>
-          </label>
-        </div>
-      </div>
-      <div class="col-12 mb-2">
-        <div class="toggle-item d-flex justify-content-between align-items-center">
-          <div class="toggle-label d-flex align-items-center">
-            <span class="toggle-text">Show Solution Popup</span>
-          </div>
-          <label class="toggle">
-            <input type="checkbox" id="showSolution" checked>
-            <span class="slider"></span>
-          </label>
-        </div>
-      </div>
-      <div class="col-12 mb-2">
-        <div class="toggle-item d-flex justify-content-between align-items-center">
-          <div class="toggle-label d-flex align-items-center">
-            <span class="toggle-text">Auto-solve on Page Load</span>
-          </div>
-          <label class="toggle">
-            <input type="checkbox" id="autoSolve" checked>
-            <span class="slider"></span>
-          </label>
-        </div>
-      </div>
-      <div class="col-12 mb-3">
-        <div class="toggle-item d-flex justify-content-between align-items-center">
-          <div class="toggle-label d-flex align-items-center">
-            <span class="toggle-text">Auto-save & Next Question</span>
-          </div>
-          <label class="toggle">
-            <input type="checkbox" id="autoSaveAfterSolve" checked>
-            <span class="slider"></span>
-          </label>
-        </div>
-      </div>
-      <!-- Save Button -->
-      <div class="col-12">
-        <button class="btn btn-primary w-100" id="saveBtn">Save Settings</button>
-      </div>
+      `).join('')}
     </div>
+  `;
 
-    <!-- Status Message -->
-    <div id="status" class="mt-3"></div>
-
-    <!-- Help Link -->
-    <div class="text-center mt-3">
-      <a href="options.html" target="_blank" class="btn btn-outline-info">Open full settings page</a>
-    </div>
-    `;
-
-    // Initialize the settings UI after the DOM is added to the page
-    setTimeout(() => {
-        initSettingsPage();
-    }, 0);
-
-    return container;
+  setTimeout(() => initSettingsPage(), 0);
+  return container;
 });
 
-// Initialize the settings page settings UI
+function formatLabel(id) {
+  return id
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/^./, str => str.toUpperCase());
+}
+
 async function initSettingsPage() {
-    try {
-        // Import settings manager dynamically
-        const module = await import('../../../scripts/settings_manager.js');
-        const settingsManager = module.default;
+  try {
+    const module = await import('../../scripts/settings_manager.js');
+    const settingsManager = module.default;
 
-        // Wait for settings manager to be initialized
-        if (!settingsManager.isInitialized) {
-            await settingsManager.initialize();
-        }
-
-        // Get current settings
-        const settings = settingsManager.getAll();
-
-        // Set form values from settings
-        document.getElementById('apiKey').value = settings.apiKey || '';
-        document.getElementById('autoSelect').checked = settings.autoSelect !== false;
-        document.getElementById('autoSaveQuiz').checked = settings.autoSaveQuiz !== false;
-        document.getElementById('enableCopyPaste').checked = settings.enableCopyPaste !== false;
-        document.getElementById('autoSkipAllLectures').checked = settings.autoSkipAllLectures !== false;
-        document.getElementById('showSolution').checked = settings.showSolution !== false;
-        document.getElementById('autoSolve').checked = settings.autoSolve === true;
-        document.getElementById('autoSaveAfterSolve').checked = settings.autoSaveAfterSolve === true;
-
-        // Initialize API status
-        await initApiStatus(settingsManager);
-
-        // Add save button listener
-        document.getElementById('saveBtn').addEventListener('click', async () => {
-            await saveSettings(settingsManager);
-        });
-
-        // Listen for settings changes
-        settingsManager.addListener((updatedSettings) => {
-            updateSettingsUI(updatedSettings);
-        });
-
-    } catch (error) {
-        console.error('Error initializing settings page:', error);
+    if (!settingsManager.initialized) {
+      await settingsManager.initialize();
     }
+
+    const settings = settingsManager.getAll();
+
+    // Populate form
+    document.getElementById('apiKey').value = settings.apiKey || '';
+    CHECKBOX_IDS.forEach(id => {
+      const checkbox = document.getElementById(id);
+      if (checkbox) {
+        checkbox.checked = settings[id] !== false;
+      }
+    });
+
+    updateApiStatus(settings);
+
+    // --- Guard: attach checkbox change listener only once per container ---
+    const container = document.getElementById('checkbox-container');
+    if (container && !container.dataset.listenerAttached) {
+      container.addEventListener('change', async (e) => {
+        const checkbox = e.target;
+        if (checkbox.tagName === 'INPUT' && checkbox.type === 'checkbox') {
+          const key = checkbox.id;
+          if (CHECKBOX_IDS.includes(key)) {
+            const value = checkbox.checked;
+            await settingsManager.set(key, value);
+            alerts.show('success', 'Settings saved');
+            console.log(`Setting "${key}" updated to`, value);
+          }
+        }
+      });
+      container.dataset.listenerAttached = 'true';
+    }
+
+    // --- Guard: attach save API key button listener only once ---
+    const saveBtn = document.getElementById('saveApiKeyBtn');
+    if (saveBtn && !saveBtn.dataset.listenerAttached) {
+      saveBtn.addEventListener('click', async () => {
+        const apiKey = document.getElementById('apiKey').value.trim();
+        if (apiKey && !apiKey.startsWith('AIza')) {
+          if (!confirm('API key format looks unusual. Are you sure this is correct?')) {
+            return;
+          }
+        }
+        await settingsManager.set('apiKey', apiKey);
+        updateApiStatus({ apiKey });
+        alerts.show('success', 'Key saved');
+      });
+      saveBtn.dataset.listenerAttached = 'true';
+    }
+
+    // --- Guard: add external change listener only once globally ---
+    if (!externalListenerAdded) {
+      settingsManager.addListener(updateSettingsUI);
+      externalListenerAdded = true;
+    }
+
+  } catch (error) {
+    console.error('Error initializing settings page:', error);
+    alerts.show('error', 'Error initializing settings', { bounce: true });
+  }
 }
 
-// Initialize API status
-async function initApiStatus(settingsManager) {
-    try {
-        const message = document.getElementById('api-status-message');
-
-        if (message) {
-            const settings = settingsManager.getAll();
-            const apiKey = settings.apiKey;
-
-            setTimeout(() => {
-                message.style.display = 'flex';
-
-                if (!apiKey) {
-                    message.innerHTML = '<span class="badge badge-danger" style="width: 12px; height: 12px;"></span>';
-                    message.title = 'API key not set';
-                } else {
-                    message.innerHTML = '<span class="badge badge-success" style="width: 12px; height: 12px;"></span>';
-                    message.title = 'API key is set';
-                }
-            }, 500);
-        }
-    } catch (error) {
-        console.error('Error checking API status:', error);
-    }
+function updateApiStatus(settings) {
+  const message = document.getElementById('api-status-message');
+  if (!message) return;
+  message.style.display = 'flex';
+  if (!settings.apiKey) {
+    message.innerHTML = '<span class="badge badge-danger" style="width: 12px; height: 12px;"></span>';
+    message.title = 'API key not set';
+  } else {
+    message.innerHTML = '<span class="badge badge-success" style="width: 12px; height: 12px;"></span>';
+    message.title = 'API key is set';
+  }
 }
 
-// Update UI with new settings
 function updateSettingsUI(settings) {
-    // Check if elements exist (page might not be active)
-    const apiKeyInput = document.getElementById('apiKey');
-    if (apiKeyInput) {
-        apiKeyInput.value = settings.apiKey || '';
-        document.getElementById('autoSelect').checked = settings.autoSelect !== false;
-        document.getElementById('autoSaveQuiz').checked = settings.autoSaveQuiz !== false;
-        document.getElementById('enableCopyPaste').checked = settings.enableCopyPaste !== false;
-        document.getElementById('autoSkipAllLectures').checked = settings.autoSkipAllLectures !== false;
-        document.getElementById('showSolution').checked = settings.showSolution !== false;
-        document.getElementById('autoSolve').checked = settings.autoSolve === true;
-        document.getElementById('autoSaveAfterSolve').checked = settings.autoSaveAfterSolve === true;
+  const apiInput = document.getElementById('apiKey');
+  if (!apiInput) return; // page not active
 
-        // Update API status badge
-        const message = document.getElementById('api-status-message');
-        if (message && message.style.display !== 'none') {
-            if (!settings.apiKey) {
-                message.innerHTML = '<span class="badge badge-danger" style="width: 12px; height: 12px;"></span>';
-                message.title = 'API key not set';
-            } else {
-                message.innerHTML = '<span class="badge badge-success" style="width: 12px; height: 12px;"></span>';
-                message.title = 'API key is set';
-            }
-        }
+  apiInput.value = settings.apiKey || '';
+  CHECKBOX_IDS.forEach(id => {
+    const checkbox = document.getElementById(id);
+    if (checkbox) {
+      checkbox.checked = settings[id] !== false;
     }
-}
+  });
 
-// Save settings
-async function saveSettings(settingsManager) {
-    try {
-        const newSettings = {
-            apiKey: document.getElementById('apiKey').value.trim(),
-            autoSelect: document.getElementById('autoSelect').checked,
-            autoSaveQuiz: document.getElementById('autoSaveQuiz').checked,
-            enableCopyPaste: document.getElementById('enableCopyPaste').checked,
-            autoSkipAllLectures: document.getElementById('autoSkipAllLectures').checked,
-            showSolution: document.getElementById('showSolution').checked,
-            autoSolve: document.getElementById('autoSolve').checked,
-            autoSaveAfterSolve: document.getElementById('autoSaveAfterSolve').checked
-        };
-
-        if (newSettings.apiKey && !newSettings.apiKey.startsWith('AIza')) {
-            if (!confirm('API key format looks unusual. Are you sure this is correct?')) {
-                return;
-            }
-        }
-
-        const success = await settingsManager.saveToStorage(newSettings);
-
-        if (success) {
-            alerts.show('success', 'Settings saved successfully!', { bounce: true });
-
-            // Refresh API status
-            await initApiStatus(settingsManager);
-        } else {
-            alerts.show('error', 'Error saving settings', { bounce: true });
-        }
-    } catch (error) {
-        console.error('Error saving settings:', error);
-        alerts.show('error', 'Error saving settings: ' + error.message);
-    }
+  updateApiStatus(settings);
 }
