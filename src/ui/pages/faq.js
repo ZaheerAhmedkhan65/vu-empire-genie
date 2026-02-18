@@ -1,3 +1,4 @@
+//ui/pages/faq.js
 import { registerRoute } from "../core/router.js";
 
 registerRoute("faq", () => {
@@ -11,15 +12,15 @@ registerRoute("faq", () => {
       </p>
     </div>
 
-    <div class="accordion" id="faqAccordion">
+    <div class="accordion border-0 rounded-0" id="faqAccordion">
       <div class="accordion-item">
         <h2 class="accordion-header">
-          <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne">
-            🤖 What is VU Empire Genie?
+          <button class="accordion-button bg-transparent" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne">
+            What is VU Empire Genie?
           </button>
         </h2>
         <div id="collapseOne" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
-          <div class="accordion-body">
+          <div class="accordion-body bg-transparent">
             <strong>VU Empire Genie</strong> is an AI-powered browser extension designed specifically for Virtual University students. 
             It helps automate tedious tasks, provides intelligent assistance with quizzes and assignments, and enhances your overall 
             learning experience on the VU LMS platform.
@@ -29,14 +30,14 @@ registerRoute("faq", () => {
       
       <div class="accordion-item">
         <h2 class="accordion-header">
-          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo">
-            🔒 Is my data safe with VU Empire Genie?
+          <button class="accordion-button bg-transparent collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo">
+            Is my data safe with VU Empire Genie?
           </button>
         </h2>
         <div id="collapseTwo" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-          <div class="accordion-body">
+          <div class="accordion-body bg-transparent">
             <strong>Absolutely!</strong> We take your privacy and security very seriously. VU Empire Genie:
-            <ul class="mt-2">
+            <ul class="my-2 ms-5">
               <li>Never stores your personal information</li>
               <li>Uses encrypted connections for all API communications</li>
               <li>Only accesses data necessary for the extension's functionality</li>
@@ -48,14 +49,14 @@ registerRoute("faq", () => {
       
       <div class="accordion-item">
         <h2 class="accordion-header">
-          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree">
-            🚀 How do I get started?
+          <button class="accordion-button bg-transparent collapsed border" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree">
+            How do I get started?
           </button>
         </h2>
         <div id="collapseThree" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-          <div class="accordion-body">
+          <div class="accordion-body bg-transparent">
             Getting started is easy:
-            <ol>
+            <ol class="my-2 ms-5">
               <li>Install the VU Empire Genie extension from your browser's extension store</li>
               <li>Get a free API key from <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a></li>
               <li>Open the extension popup and enter your API key in Settings</li>
@@ -68,14 +69,14 @@ registerRoute("faq", () => {
       
       <div class="accordion-item">
         <h2 class="accordion-header">
-          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour">
-            💰 Is VU Empire Genie free?
+          <button class="accordion-button bg-transparent collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour">
+            Is VU Empire Genie free?
           </button>
         </h2>
         <div id="collapseFour" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-          <div class="accordion-body">
+          <div class="accordion-body bg-transparent">
             <strong>Yes, we offer a free version!</strong> Our free Student plan includes:
-            <ul class="mt-2">
+            <ul class="my-2 ms-5">
               <li>Basic quiz assistance</li>
               <li>Lecture navigation</li>
               <li>GDB support</li>
@@ -87,14 +88,14 @@ registerRoute("faq", () => {
       
       <div class="accordion-item">
         <h2 class="accordion-header">
-          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFive">
-            ⚙️ How do I configure the settings?
+          <button class="accordion-button bg-transparent collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFive">
+            How do I configure the settings?
           </button>
         </h2>
         <div id="collapseFive" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-          <div class="accordion-body">
+          <div class="accordion-body bg-transparent">
             To configure settings:
-            <ol>
+            <ol class="my-2 ms-5">
               <li>Click on the VU Empire Genie icon in your browser toolbar</li>
               <li>Enter your Google AI Studio API key</li>
               <li>Toggle the features you want to enable/disable</li>
@@ -107,14 +108,14 @@ registerRoute("faq", () => {
       
       <div class="accordion-item">
         <h2 class="accordion-header">
-          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSix">
-            🐛 What if I encounter a bug?
+          <button class="accordion-button bg-transparent collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSix">
+            What if I encounter a bug?
           </button>
         </h2>
         <div id="collapseSix" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-          <div class="accordion-body">
+          <div class="accordion-body bg-transparent">
             If you encounter a bug:
-            <ul class="mt-2">
+            <ul class="my-2 ms-5">
               <li>Try refreshing the page first</li>
               <li>Check if the extension is enabled</li>
               <li>Verify your API key is valid</li>
@@ -128,12 +129,12 @@ registerRoute("faq", () => {
       
       <div class="accordion-item">
         <h2 class="accordion-header">
-          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSeven">
-            📱 Does it work on mobile devices?
+          <button class="accordion-button bg-transparent collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSeven">
+            Does it work on mobile devices?
           </button>
         </h2>
         <div id="collapseSeven" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-          <div class="accordion-body">
+          <div class="accordion-body bg-transparent">
             Currently, VU Empire Genie is designed for desktop browsers. However, we're actively working on a mobile version 
             that will be available soon. Stay tuned for updates in the Updates section!
           </div>
@@ -142,14 +143,14 @@ registerRoute("faq", () => {
       
       <div class="accordion-item">
         <h2 class="accordion-header">
-          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseEight">
-            🔄 How often is the extension updated?
+          <button class="accordion-button bg-transparent collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseEight">
+            How often is the extension updated?
           </button>
         </h2>
         <div id="collapseEight" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-          <div class="accordion-body">
+          <div class="accordion-body bg-transparent">
             We regularly update VU Empire Genie to:
-            <ul class="mt-2">
+            <ul class="my-2 ms-5">
               <li>Fix bugs and improve stability</li>
               <li>Add new features based on user feedback</li>
               <li>Ensure compatibility with VU LMS updates</li>
@@ -161,16 +162,15 @@ registerRoute("faq", () => {
       </div>
     </div>
 
-    <div class="card mt-4">
+    <div class="card mt-4 bg-transparent">
       <div class="card-body">
         <h5 class="card-title">💡 Still Have Questions?</h5>
         <p class="card-text text-muted">
           If you couldn't find an answer to your question here, don't worry! Our support team is here to help.
         </p>
-        <div class="d-flex gap-2">
-          <button class="btn btn-primary" onclick="window.open('https://vulms.vu.edu.pk', '_blank')">Visit VU LMS</button>
-          <button class="btn btn-outline-info" data-route="support">Contact Support</button>
-          <button class="btn btn-outline-success" data-route="feedback">Send Feedback</button>
+        <div class="d-flex align-items-center justify-content-center gap-2">
+          <button class="btn btn-info w-100" data-route="support">Contact Support</button>
+          <button class="btn btn-info w-100" data-route="feedback">Send Feedback</button>
         </div>
       </div>
     </div>

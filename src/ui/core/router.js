@@ -25,22 +25,7 @@ export class Router {
     }
 
     navigate(path, params = {}) {
-        // Check if route requires authentication
-        if (this.authRequiredRoutes.has(path)) {
-            // Import auth manager dynamically to avoid circular imports
-            import('./auth.js').then(({ authManager }) => {
-                if (!authManager.isAuthenticated()) {
-                    this.navigate('signin', { redirectTo: path });
-                    return;
-                }
-                this.performNavigation(path, params);
-            }).catch(error => {
-                console.error('Error checking authentication:', error);
-                this.navigate('signin', { redirectTo: path });
-            });
-        } else {
-            this.performNavigation(path, params);
-        }
+        this.performNavigation(path, params);
     }
 
     performNavigation(path, params = {}) {
@@ -85,26 +70,6 @@ let routerInstance = null;
 export function initRouter(outlet) {
     routerInstance = new Router({ outlet });
     return routerInstance;
-}
-
-// Helper function to create protected routes
-export function createProtectedRoute(component, authCheck = null) {
-    return (params) => {
-        // Import auth manager dynamically to avoid circular imports
-        return import('./auth.js').then(({ authManager }) => {
-            if (!authManager.isAuthenticated()) {
-                // Redirect to signin with current path as redirect target
-                const currentPath = window.location.hash.replace('#/', '') || 'home';
-                navigate('signin', { redirectTo: currentPath });
-                return document.createElement('div'); // Return empty element
-            }
-            return component(params);
-        }).catch(error => {
-            console.error('Error checking authentication:', error);
-            navigate('signin');
-            return document.createElement('div'); // Return empty element
-        });
-    };
 }
 
 export function startRouter(defaultRoute) {

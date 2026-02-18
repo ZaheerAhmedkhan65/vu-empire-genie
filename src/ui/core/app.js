@@ -1,29 +1,10 @@
+// ui/core/app.js
 import { initRouter, startRouter, registerPendingRoutes, registerRoute, navigate } from "./router.js";
 import { initNavbar } from "../components/Navbar.js";
-import { authManager } from "./auth.js";
 
 // Initialize router first
 const router = initRouter("app-view");
 initNavbar();
-// Set up authentication state listener to update UI
-authManager.subscribe((user) => {
-    // Update UI elements based on authentication state
-    updateAuthUI(user);
-});
-
-function updateAuthUI(user) {
-    // Update any auth-related UI elements
-    const authButtons = document.querySelectorAll('[data-auth-action]');
-    authButtons.forEach(button => {
-        if (user) {
-            button.textContent = 'Sign Out';
-            button.dataset.route = 'signout';
-        } else {
-            button.textContent = 'Sign In';
-            button.dataset.route = 'signin';
-        }
-    });
-}
 
 // Import pages after router is initialized and wait for them to complete
 Promise.all([
@@ -36,9 +17,6 @@ Promise.all([
     import("../pages/updates.js"),
     import("../pages/terms.js"),
     import("../pages/about.js"),
-    import("../pages/signin.js"),
-    import("../pages/signup.js"),
-    import("../pages/dashboard.js"),
     import("../pages/settings.js"),
     import("../pages/history.js")
 ]).then(() => {
@@ -52,12 +30,6 @@ Promise.all([
             <div class="fs-1 mb-3">Signing Out...</div>
             <div class="text-muted">You will be redirected to the home page shortly.</div>
         `;
-
-        // Sign out and redirect
-        setTimeout(() => {
-            authManager.signOut();
-            navigate('home');
-        }, 1000);
 
         return container;
     });

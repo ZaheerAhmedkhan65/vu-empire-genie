@@ -12,7 +12,7 @@ registerRoute("about", () => {
     </div>
 
     <div class="mb-3">
-      <h4 class="fs-4">Our Mission</h4>
+      <h4 class="fs-4 mb-2">Our Mission</h4>
       <p class="text-muted">
         To empower VU students with cutting-edge AI technology that makes learning more efficient, 
         accessible, and effective. We believe every student deserves personalized support on their academic journey.
@@ -20,33 +20,29 @@ registerRoute("about", () => {
     </div>
 
     <div class="mb-3">
-      <h4 class="fs-4">What We Offer</h4>
-      <ul class="list-unstyled text-muted">
+      <h4 class="fs-4 mb-2">What We Offer</h4>
+      <ul class="my-2 ms-5 text-muted">
         <li class="mb-2">
-          <strong>🤖 AI-Powered Assistance:</strong> Get instant help with lectures, quizzes, and assignments
+          <strong>AI-Powered Assistance:</strong> Get instant help with lectures, quizzes, and assignments
         </li>
         <li class="mb-2">
-          <strong>⚡ Time-Saving Automation:</strong> Skip tedious tasks and focus on what matters most
+          <strong>Time-Saving Automation:</strong> Skip tedious tasks and focus on what matters most
         </li>
         <li class="mb-2">
-          <strong>🎯 Personalized Learning:</strong> Tailored solutions for your specific academic needs
+          <strong>Personalized Learning:</strong> Tailored solutions for your specific academic needs
         </li>
         <li class="mb-2">
-          <strong>🔒 Privacy First:</strong> Your data stays secure and private
+          <strong>Privacy First:</strong> Your data stays secure and private
         </li>
       </ul>
     </div>
 
     <div class="mb-3">
-      <h4 class="fs-4">Built for VU Students, by VU Students</h4>
+      <h4 class="fs-4 mb-2">Built for VU Students, by VU Students</h4>
       <p class="text-muted">
         Our team understands the unique challenges of Virtual University education. 
         We've designed VU Empire Genie to address the specific needs of online learners.
       </p>
-    </div>
-
-    <div class="text-center mt-4">
-      <button class="btn btn-primary" onclick="window.open('https://vulms.vu.edu.pk', '_blank')">Visit VU LMS</button>
     </div>
   `;
     return container;
