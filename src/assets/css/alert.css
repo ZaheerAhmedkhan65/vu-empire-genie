@@ -36,7 +36,7 @@
 /* ===================== */
 /* Alert box styles */
 /* ===================== */
-.alert {
+.alert-m {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -52,37 +52,40 @@
     transform: translateX(100%);
     animation: slideIn 0.5s forwards;
     position: relative;
+    margin-bottom: 5px;
 }
 
-.alert span.message {
+.alert-m span.message {
     flex: 1;
     margin-left: 8px;
 }
 
-.alert .close-btn {
+.alert-m .close-btn {
     cursor: pointer;
     font-weight: bold;
     margin-left: 12px;
 }
 
-.alert.success {
+.alert-m.success {
     background: #4caf50;
 }
 
-.alert.error {
+.alert-m.error {
     background: #f44336;
+    color: white;
 }
 
-.alert.warning {
+.alert-m.warning {
     background: #ff9800;
+    color: white;
 }
 
-.alert.info {
+.alert-m.info {
     background: #2196f3;
 }
 
 /* Optional icons */
-.alert .icon {
+.alert-m .icon {
     width: 20px;
     height: 20px;
     display: inline-block;

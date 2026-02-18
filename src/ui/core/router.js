@@ -11,7 +11,6 @@ export class Router {
     }
 
     register(path, component, options = {}) {
-        console.log(`Registering route: ${path}, component: ${component}`);
         this.routes[path] = component;
         
         // Mark route as protected if specified
@@ -26,28 +25,11 @@ export class Router {
     }
 
     navigate(path, params = {}) {
-        // Check if route requires authentication
-        if (this.authRequiredRoutes.has(path)) {
-            // Import auth manager dynamically to avoid circular imports
-            import('./auth.js').then(({ authManager }) => {
-                if (!authManager.isAuthenticated()) {
-                    console.log('Route requires authentication, redirecting to signin');
-                    this.navigate('signin', { redirectTo: path });
-                    return;
-                }
-                this.performNavigation(path, params);
-            }).catch(error => {
-                console.error('Error checking authentication:', error);
-                this.navigate('signin', { redirectTo: path });
-            });
-        } else {
-            this.performNavigation(path, params);
-        }
+        this.performNavigation(path, params);
     }
 
     performNavigation(path, params = {}) {
         const Screen = this.routes[path];
-        console.log(`Navigating to ${path}`);
         if (!Screen) throw new Error(`Route ${path} not found`);
 
         this.outlet.innerHTML = "";
@@ -64,7 +46,6 @@ export class Router {
             if (link) {
                 e.preventDefault();
                 const route = link.dataset.route;
-                console.log(`Global navigation to ${route}`);
                 this.navigate(route);
             }
         });
@@ -77,7 +58,6 @@ export class Router {
             if (link) {
                 e.preventDefault();
                 const route = link.dataset.route;
-                console.log(`Screen navigation to ${route}`);
                 this.navigate(route);
             }
         });
@@ -90,26 +70,6 @@ let routerInstance = null;
 export function initRouter(outlet) {
     routerInstance = new Router({ outlet });
     return routerInstance;
-}
-
-// Helper function to create protected routes
-export function createProtectedRoute(component, authCheck = null) {
-    return (params) => {
-        // Import auth manager dynamically to avoid circular imports
-        return import('./auth.js').then(({ authManager }) => {
-            if (!authManager.isAuthenticated()) {
-                // Redirect to signin with current path as redirect target
-                const currentPath = window.location.hash.replace('#/', '') || 'home';
-                navigate('signin', { redirectTo: currentPath });
-                return document.createElement('div'); // Return empty element
-            }
-            return component(params);
-        }).catch(error => {
-            console.error('Error checking authentication:', error);
-            navigate('signin');
-            return document.createElement('div'); // Return empty element
-        });
-    };
 }
 
 export function startRouter(defaultRoute) {

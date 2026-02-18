@@ -14,8 +14,6 @@ chrome.runtime.onInstalled.addListener(async ({ reason }) => {
 
 // Handle messages from both MAIN and ISOLATED worlds
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log('Message received:', request.type, 'from tab:', sender.tab?.id);
-
   switch (request.type) {
     case 'OPEN_OPTIONS':
       chrome.runtime.openOptionsPage();
@@ -39,7 +37,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     case 'SAVE_QUIZ_DATA':
       chrome.storage.local.get(['quizData'], (result) => {
         const quizData = result.quizData || [];
-        console.log("quizData", request.data)
         quizData.push(request.data);
         const formattedData = {
           courseCode: request.data.courseCode,
@@ -58,58 +55,128 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           }))
         };
 
-        console.log("formattedData", formattedData)
         chrome.storage.local.set({ quizData }, () => {
-          // saveQuizQuestionToServer(formattedData, sendResponse);
+          saveQuizQuestionToServer(formattedData, sendResponse);
         });
         sendResponse({ success: true });
       });
       return true;
 
-    case 'DOWNLOAD_GROUPED_PDF':
-      (async () => {
-        try {
-          const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-
-          const response = await chrome.tabs.sendMessage(tab.id, {
-            type: 'GENERATE_GROUPED_PDF',
-            data: request.data
-          });
-          console.log("DOWNLOAD_GROUPED_PDF response in background", response);
-          if (response && response.success) {
-            chrome.downloads.download({
-              url: response.url,
-              filename: request.filename,
-              conflictAction: 'uniquify',
-              saveAs: false
-            }, (downloadId) => {
-              if (chrome.runtime.lastError) {
-                sendResponse({ success: false, error: chrome.runtime.lastError.message });
-              } else {
-                sendResponse({ success: true, downloadId: downloadId });
-              }
-            });
-          } else {
-            sendResponse({
-              success: false,
-              error: response?.error || 'PDF generation failed'
-            });
-          }
-
-        } catch (error) {
-          sendResponse({ success: false, error: error.message });
-        }
-      })();
+    case 'DOWNLOAD_QUIZ_GROUP':
+      handleDownloadQuizGroup(request.data, sendResponse);
       return true;
   }
 });
 
+async function handleDownloadQuizGroup(data, sendResponse) {
+  try {
+    const { quizzes, groupInfo } = data;
+
+    // Deduplicate questions by normalized text
+    const seen = new Set();
+    const uniqueQuizzes = quizzes.filter(q => {
+      const norm = normalizeQuestionText(q.question);
+      if (seen.has(norm)) return false;
+      seen.add(norm);
+      return true;
+    });
+
+    const html = generateQuizHTML(uniqueQuizzes, groupInfo);
+
+    // Convert HTML to a base64 data URL
+    const base64 = btoa(unescape(encodeURIComponent(html))); // UTF-8 safe
+    const dataUrl = `data:text/html;charset=utf-8;base64,${base64}`;
+
+    const filename = `VU_Quiz_${groupInfo.courseCode}_${groupInfo.studentId}_${Date.now()}.html`;
+
+    chrome.downloads.download({
+      url: dataUrl,
+      filename: filename,
+      conflictAction: 'uniquify',
+      saveAs: false
+    }, (downloadId) => {
+      if (chrome.runtime.lastError) {
+        sendResponse({ success: false, error: chrome.runtime.lastError.message });
+      } else {
+        sendResponse({ success: true, downloadId });
+      }
+    });
+  } catch (error) {
+    sendResponse({ success: false, error: error.message });
+  }
+}
+
+function normalizeQuestionText(text) {
+  return text.replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+function generateQuizHTML(quizzes, groupInfo) {
+  const style = `
+    <style>
+      body {font-family: 'Segoe UI', Arial, sans-serif; max-width: 250mm; margin: 10px auto 20px; padding: 10px; background: #f5f5f5; color: #333; line-height: 1.6;}
+      .print-container {padding: 5mm 10mm;}
+      .controls {text-align: center; margin: 20px 0;padding: 15px;background: #e8f4fc;border-radius: 8px;}
+      .print-btn{background: #004080; color: white; border: none; padding: 12px 24px; border-radius: 6px; font-size: 16px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;}
+      h2 { color: #2c3e50; }
+      .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+      .quiz-item { margin-bottom: 10px; padding: 10px 5px; border: 1px solid #ddd; }
+      .question { font-weight: bold; margin-bottom: 10px; }
+      .options { margin-left: 20px; }
+      .correct { color: #27ae60; font-weight: bold; }
+      .explanation { margin-top: 10px; font-style: italic; color: #7f8c8d; background-color: #ffff0070; padding: 10px; border-radius: 10px; }
+      hr { border: 1px solid #eee; }
+    </style>
+  `;
+
+  let html = `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Quiz Report</title>${style}</head>
+<body>
+  <div class="print-container">
+  <h2>${groupInfo.courseName}</h2>
+  <div class="header">
+    <strong>${groupInfo.studentName} (${groupInfo.studentId})</strong>
+    <p>${new Date(groupInfo.timestamp).toLocaleString()}</p>
+  </div>
+  <hr>`;
+
+  html+=`
+  <div class="controls no-print">
+    <button class="print-btn" onclick="window.print()">
+        🖨️ Print to PDF
+    </button>
+    <p style="margin-top: 10px; color: #666; font-size: 14px;">
+        Click the button above, then choose "Save as PDF" in the print dialog
+    </p>
+  </div>
+  `
+
+  quizzes.forEach((quiz, idx) => {
+    const correctLetter = quiz.solution?.correctAnswers?.[0] || '';
+    html += `<div class="quiz-item">
+      <div class="question">Q${idx + 1}: ${quiz.question}</div>
+      <div class="options">`;
+
+    quiz.options.forEach(opt => {
+      const isCorrect = opt.letter === correctLetter;
+      html += `<div ${isCorrect ? 'class="correct"' : ''}>${opt.letter}. ${opt.text}</div>`;
+    });
+
+    if (quiz.solution?.explanation) {
+      html += `<div class="explanation"><strong>Explanation: </strong>${quiz.solution.explanation}</div>`;
+    }
+
+    html += `</div></div>`;
+  });
+
+  html += `</div></body></html>`;
+  return html;
+}
 
 async function saveQuizQuestionToServer(formattedData, sendResponse) {
   try {
     const { serverUrl } = await chrome.storage.sync.get(['serverUrl']);
     const baseUrl = serverUrl || 'https://vu-empire-genie.vercel.app';
-
     const response = await fetch(`${baseUrl}/api/quiz/save`, {
       method: 'POST',
       headers: {
@@ -121,9 +188,7 @@ async function saveQuizQuestionToServer(formattedData, sendResponse) {
     });
 
     const result = await response.json();
-
     if (response.ok && result.success) {
-      console.log('Quiz question saved to question bank:', result);
       sendResponse({
         success: true,
         message: 'Question added to question bank',
@@ -151,14 +216,11 @@ async function saveQuizQuestionToServer(formattedData, sendResponse) {
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete' && tab.url?.includes('vulms.vu.edu.pk')) {
     // You can add dynamic injection logic here if needed
-    console.log('VU page loaded:', tab.url);
   }
 });
 
 // Listen for messages from content scripts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log('Background message received:', request.type, 'from tab:', sender.tab?.id);
-
   switch (request.type) {
     case 'EXTRACT_STUDENT_INFO':
       handleStudentInfoExtraction(request, sender, sendResponse);
@@ -181,7 +243,6 @@ async function handleStudentInfoExtraction(request, sender, sendResponse) {
     // Save to sync storage
     await chrome.storage.sync.set({ studentInfo });
 
-    console.log('Student info saved:', studentInfo);
     sendResponse({ success: true, studentInfo });
   } catch (error) {
     console.error('Error saving student info:', error);

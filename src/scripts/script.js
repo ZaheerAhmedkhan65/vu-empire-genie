@@ -2,8 +2,6 @@
 import settingsManager from './settings_manager.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('VU Empire Genie Popup loaded');
-
     // Initialize settings manager
     await settingsManager.initialize();
 
@@ -22,7 +20,6 @@ async function initPopup() {
         // Initialize API status
         await initApiStatus();
 
-        console.log('Popup initialized successfully');
     } catch (error) {
         console.error('Error initializing popup:', error);
         alerts.show('error', 'Error initializing: ' + error.message);

@@ -1,12 +1,15 @@
+// views/js/AlertManager.js
+console.log('AlertManager is loaded');
 class AlertManager {
     constructor(containerId = 'alertContainer', defaultDuration = 4000) {
         this.container = document.getElementById(containerId);
         this.defaultDuration = defaultDuration;
+        console.log('AlertManager initialized');
     }
 
     show(type = 'info', message = '', options = {}) {
         const alert = document.createElement('div');
-        alert.className = `alert ${type}`;
+        alert.className = `alert-m ${type}`;
         if (options.bounce) alert.style.animation = 'slideIn 0.5s forwards, bounce 0.5s 1';
         alert.innerHTML = `
             ${options.icon ? `<span class="icon">${options.icon}</span>` : ''}
@@ -38,10 +41,9 @@ class AlertManager {
     }
 
     hideAll() {
-        const alerts = this.container.querySelectorAll('.alert');
+        const alerts = this.container.querySelectorAll('.alert-m');
         alerts.forEach(alert => this.hide(alert));
     }
 }
-
 // Initialize
 const alerts = new AlertManager();

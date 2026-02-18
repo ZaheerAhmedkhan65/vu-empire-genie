@@ -1,10 +1,70 @@
 // scripts/content_main.js
-console.log('VU Empire Genie (MAIN World) - Lecture Mode - FIXED');
+console.log('VU Empire Genie - Lecture Mode');
+
+class AlertManager {
+    constructor(containerId = 'alertContainer', defaultDuration = 4000) {
+        this.container = document.getElementById(containerId);
+
+        if (!this.container) {
+            this.container = document.createElement('div');
+            this.container.id = containerId;
+            document.body.appendChild(this.container);
+        }
+
+        this.defaultDuration = defaultDuration;
+    }
+
+    
+
+    show(type = 'info', message = '', options = {}) {
+        const alert = document.createElement('div');
+        alert.className = `alert-m ${type}`;
+        if (options.bounce) alert.style.animation = 'slideIn 0.5s forwards, bounce 0.5s 1';
+        alert.innerHTML = `
+            ${options.icon ? `<span class="icon">${options.icon}</span>` : ''}
+            <span class="message">${message}</span>
+            <span class="close-btn">&times;</span>
+        `;
+
+        // Close button
+        alert.querySelector('.close-btn').onclick = () => this.hide(alert);
+
+        // Append to container
+        this.container.appendChild(alert);
+
+        // Auto-dismiss
+        const duration = options.duration || this.defaultDuration;
+        const timeout = setTimeout(() => this.hide(alert), duration);
+
+        // Optional callbacks
+        if (options.onShow) options.onShow(alert);
+
+        // Store timeout to allow clearing if needed
+        alert._timeout = timeout;
+    }
+
+    hide(alert) {
+        if (alert._timeout) clearTimeout(alert._timeout);
+        alert.style.animation = 'slideOut 0.5s forwards';
+        setTimeout(() => alert.remove(), 500);
+    }
+
+    hideAll() {
+        const alerts = this.container.querySelectorAll('.alert-m');
+        alerts.forEach(alert => this.hide(alert));
+    }
+}
+
+// Initialize
+const vu_alerts = new AlertManager();
 
 class VULectureGenie {
     constructor() {
         this.pageType = 'lecture';
         this.settings = this.loadSettings();
+        this.skipButton = null;
+        this.autoSkipButton = null;
+        this.isInitialized = false;
         this.init();
     }
 
@@ -31,14 +91,20 @@ class VULectureGenie {
     }
 
     async init() {
+        if (this.isInitialized) return;
+        this.isInitialized = true;
+
         await this.waitForPageReady();
         this.injectUI();
 
-        console.log('Lecture Genie initialized with settings:', this.settings);
-
+        // After UI is ready, store button references and set initial state
+        if (this.settings.autoSkipLecture) {
+            this.updateSkipButtonState(true, 'Marking Attendance...');
+        } else {
+            this.updateSkipButtonState(false, 'Mark This Lecture');
+        }
         // Auto-skip lecture if enabled
         if (this.settings.autoSkipLecture) {
-            console.log('Auto-skip lectures enabled. Skipping current lecture...');
             await this.skipLecture();
         }
     }
@@ -57,14 +123,6 @@ class VULectureGenie {
     injectUI() {
         if (document.getElementById('vu-genie-ui')) return;
 
-        const floatingBtnContainer = document.createElement("div");
-        floatingBtnContainer.classList.add("floating-btn-container");
-        const floatingBtn = document.createElement("button");
-        floatingBtn.innerHTML = 'vu';
-        floatingBtn.classList.add("floating-btn", "hide");
-        floatingBtnContainer.appendChild(floatingBtn);
-        document.body.appendChild(floatingBtnContainer);
-
         const container = document.createElement('div');
         container.id = 'vu-genie-ui';
         container.innerHTML = `
@@ -72,182 +130,51 @@ class VULectureGenie {
                 <div class="vu-genie-content-wrapper">
                     <div class="vu-genie-content">
                         <button class="vu-btn ${this.settings.autoSkipLecture ? 'active' : ''}" data-action="auto-skip-lecture">
-                           ${this.settings.autoSkipLecture ? 'Stop' : 'Auto Skip All Lectures'}
+                           ${this.settings.autoSkipLecture ? 'Stop' : 'Auto Mark All Lectures'}
                         </button>
 
                         <button class="vu-btn primary" data-action="skip-lecture">
-                            Skip This Lecture
+                            Mark This Lecture
                         </button>
                     </div>
-                    <button class="vu-genie-close">×</button>
                 </div>
-                <div class="vu-genie-status" id="vu-genie-status">Ready</div>
             </div>
         `;
 
-        this.injectStyles();
         document.body.appendChild(container);
         this.attachEventListeners();
     }
 
-    injectStyles() {
-        const style = document.createElement('style');
-        style.textContent = `
-            #vu-genie-ui {
-                min-width: 250px;
-                position: fixed;
-                bottom: 20px;
-                right: calc(50% - 175px);
-                z-index: 10000;
-                font-family: 'Segoe UI', Arial, sans-serif;
-            }
-            
-            .vu-genie-container {
-                background: rgba(0, 64, 128, 0.95);
-                backdrop-filter: blur(10px);
-                border-radius: 12px;
-                padding: 10px 15px 5px;
-                min-width: 250px;
-                color: white;
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-                animation: slideUp 0.3s ease;
-            }
-
-            .floating-btn-container{
-                position: fixed;
-                bottom: 40px;
-                right: 40px;
-                text-align: end;
-            }
-
-            .floating-btn{
-                background-color: rgba(0, 64, 128, 0.95);
-                color: white;
-                font-size: 22px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding: 20px 15px;
-                border-radius: 50%;
-                border: none;
-                outline: none;
-                text-transform: uppercase;
-                font-weight: bold;
-            }
-
-            .show{ display: block !important; }
-            .hide{ display: none !important; }
-            
-            @keyframes slideUp {
-                from { transform: translateY(100px); opacity: 0; }
-                to { transform: translateY(0); opacity: 1; }
-            }
-            
-            .vu-genie-close {
-                background: red;
-                border: none;
-                outline:none;
-                color: white;
-                font-size: 24px;
-                cursor: pointer;
-                padding: 0;
-                width: 24px;
-                height: 24px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border-radius: 50%;
-                position: absolute;
-                top: -8px;
-                right: -8px;
-            }
-            
-            .vu-genie-close:hover {
-                background: rgba(255, 255, 255, 0.1);
-                color: black;
-            }
-
-            .vu-genie-content-wrapper {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-            
-            .vu-genie-content {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 18px;
-            }
-            
-            .vu-btn {
-                padding: 5px 10px;
-                border: none;
-                border-radius: 8px;
-                cursor: pointer;
-                font-weight: 600;
-                font-size: 14px;
-                transition: all 0.2s;
-            }
-            
-            .vu-btn:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            }
-            
-            .vu-btn.primary {
-                background: #10b981;
-                color: white;
-            }
-            
-            .vu-genie-status {
-                margin-top: 10px;
-                padding-top: 5px;
-                border-top: 1px solid rgba(255, 255, 255, 0.1);
-                font-size: 12px;
-                opacity: 0.8;
-                text-align: center;
-            }
-        `;
-        document.head.appendChild(style);
-    }
-
     attachEventListeners() {
-        const container = document.getElementById('vu-genie-ui');
-        const floatingBtn = document.querySelector(".floating-btn");
+        this.autoSkipButton = document.querySelector('[data-action="auto-skip-lecture"]');
+        this.skipButton = document.querySelector('[data-action="skip-lecture"]');
 
-        container.querySelector('.vu-genie-close').addEventListener('click', () => {
-            container.style.display = 'none';
-            floatingBtn.classList.remove('hide');
-            floatingBtn.classList.add('show');
-        });
+        if (this.autoSkipButton) {
+            this.autoSkipButton.addEventListener('click', () => {
+                this.autoSkipLectures();
+            });
+        }
 
-        floatingBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            container.style.display = 'block';
-            floatingBtn.classList.remove('show');
-            floatingBtn.classList.add('hide');
-        });
-
-        container.querySelector('[data-action="auto-skip-lecture"]').addEventListener('click', () => {
-            this.autoSkipLectures();
-        });
-
-        container.querySelector('[data-action="skip-lecture"]').addEventListener('click', () => {
-            this.skipLecture();
-        });
+        if (this.skipButton) {
+            this.skipButton.addEventListener('click', () => {
+                this.skipLecture();
+            });
+        }
     }
 
-    updateStatus(message) {
-        const statusElement = document.getElementById('vu-genie-status');
-        if (statusElement) {
-            statusElement.textContent = message;
+    updateSkipButtonState(disable, text = null) {
+        if (!this.skipButton) return;
+        this.skipButton.disabled = disable;
+        if (text !== null) {
+            this.skipButton.innerText = text;
         }
     }
 
     async skipLecture() {
         try {
-            this.updateStatus('Processing...');
+            // Disable the skip button and show progress
+            this.updateSkipButtonState(true, 'Marking Attendance...');
+
             const startTime = Date.now();
 
             // 1. Update all tab UIs instantly
@@ -260,27 +187,24 @@ class VULectureGenie {
             await this.triggerCompletionAndNavigate();
 
             const elapsed = Date.now() - startTime;
-            this.updateStatus(`Completed in ${elapsed}ms`);
-            console.log(`✅ Lecture skipped in ${elapsed}ms`);
-
         } catch (error) {
             console.error("Error in skipLecture:", error);
-            this.showNotification(`❌ Error: ${error.message}`, 'error');
-            this.updateStatus('Error');
+            vu_alerts.show('error', 'Error skipping lecture', { bounce: true });
+        } finally {
+        // Re‑enable the skip button only if auto‑skip is NOT enabled
+        if (!this.settings.autoSkipLecture) {
+            this.updateSkipButtonState(false, 'Mark This Lecture');
         }
+    }
     }
 
     updateAllTabUIsInstantly() {
-        console.log("Updating all tab UIs instantly...");
-
         const allTabElements = document.querySelectorAll('a.nav-link[id^="tabHeader"]');
 
         for (const tabElement of allTabElements) {
             const tabId = tabElement.id.replace('tabHeader', '');
             this.markTabAsCompleted(tabId);
         }
-
-        console.log(`✅ Updated ${allTabElements.length} tab UIs`);
     }
 
     markTabAsCompleted(tabId) {
@@ -314,10 +238,7 @@ class VULectureGenie {
     }
 
     async saveAllTabsWith85Percent() {
-        console.log("Saving all tabs with 85% watched duration...");
-
         if (typeof PageMethods?.SaveStudentVideoLog !== 'function') {
-            console.log("PageMethods not available");
             return;
         }
 
@@ -330,11 +251,8 @@ class VULectureGenie {
             const data = this.extractTabDataWith85Percent(tabId);
             if (data) {
                 tabDataArray.push(data);
-                console.log(`Tab ${tabId}: ${data.tabName} - ${data.totalDuration}s total, ${data.watchedDuration}s watched (${data.percentage}%)`);
             }
         }
-
-        console.log(`Found ${tabDataArray.length} tabs to save`);
 
         // Save each tab with 85% watched duration
         const savePromises = tabDataArray.map(tabData =>
@@ -343,8 +261,6 @@ class VULectureGenie {
 
         // Wait for saves to complete
         await Promise.allSettled(savePromises);
-
-        console.log("All save requests completed");
     }
 
     extractTabDataWith85Percent(tabId) {
@@ -386,8 +302,6 @@ class VULectureGenie {
                 watchedDuration = Math.round(totalDuration * 0.85);
                 percentage = 85;
 
-                console.log(`Video ${tabId}: Total=${totalDuration}s, Watched=${watchedDuration}s (${percentage}%)`);
-
             } else if (typeFlag === -2) { // Assessment
                 // Assessments: mark as 90% completed
                 totalDuration = 300; // 5 minutes total
@@ -426,8 +340,6 @@ class VULectureGenie {
     async saveTabWith85Percent(tabData) {
         return new Promise((resolve) => {
             try {
-                console.log(`Saving tab ${tabData.tabId} with ${tabData.percentage}% watched...`);
-
                 // Set timeout
                 const timeout = setTimeout(() => {
                     console.warn(`Timeout saving tab ${tabData.tabId}`);
@@ -448,7 +360,6 @@ class VULectureGenie {
                     window.location.href,
                     (result) => {
                         clearTimeout(timeout);
-                        console.log(`✅ Tab ${tabData.tabId} saved: ${tabData.watchedDuration}/${tabData.totalDuration}s (${tabData.percentage}%)`);
                         resolve(true);
                     },
                     (error) => {
@@ -477,11 +388,10 @@ class VULectureGenie {
                     const playerDuration = window.CurrentPlayer.getDuration();
                     if (playerDuration && playerDuration > 0) {
                         duration = playerDuration;
-                        console.log(`✅ YouTube video duration: ${duration}s`);
                     }
                 }
             } catch (youtubeError) {
-                console.log("YouTube player not available or error:", youtubeError.message);
+                console.error("YouTube player not available or error:", youtubeError.message);
             }
 
             // SAFELY check VU video player
@@ -492,11 +402,10 @@ class VULectureGenie {
                     const vuDuration = window.CurrentLVPlayer.duration;
                     if (vuDuration && vuDuration > 0) {
                         duration = vuDuration;
-                        console.log(`✅ VU video duration: ${duration}s`);
                     }
                 }
             } catch (vuError) {
-                console.log("VU video player not available or error:", vuError.message);
+                console.error("VU video player not available or error:", vuError.message);
             }
 
             // SAFELY check HTML5 video element
@@ -506,10 +415,9 @@ class VULectureGenie {
                     videoElement.duration &&
                     videoElement.duration > 0) {
                     duration = videoElement.duration;
-                    console.log(`✅ HTML5 video duration: ${duration}s`);
                 }
             } catch (html5Error) {
-                console.log("HTML5 video not available or error:", html5Error.message);
+                console.error("HTML5 video not available or error:", html5Error.message);
             }
 
             // Check for duration in hidden fields
@@ -519,17 +427,15 @@ class VULectureGenie {
                     const parsed = parseFloat(durationField.value);
                     if (parsed > 0) {
                         duration = parsed;
-                        console.log(`✅ Video duration from hidden field: ${duration}s`);
                     }
                 }
             } catch (fieldError) {
-                console.log("Duration field not available or error:", fieldError.message);
+                console.error("Duration field not available or error:", fieldError.message);
             }
 
             // If still no duration detected, use intelligent defaults
             if (duration <= 0) {
                 duration = this.estimateDurationFromTabName(tabId);
-                console.log(`📊 Estimated duration from tab name: ${duration}s`);
             }
 
             return Math.max(duration, 60); // Minimum 60 seconds
@@ -571,8 +477,6 @@ class VULectureGenie {
     }
 
     async triggerCompletionAndNavigate() {
-        console.log("Triggering completion...");
-
         // Try to trigger lesson completion
         this.triggerCompletion();
 
@@ -584,7 +488,7 @@ class VULectureGenie {
 
         if (!success) {
             this.enableNextButton();
-            this.showNotification('✅ Lecture marked as 85% completed. Click "Next" to continue.', 'success');
+            vu_alerts.show('warning', 'Could not navigate to next lesson', { bounce: true });
         }
 
         return success;
@@ -597,7 +501,6 @@ class VULectureGenie {
                 const btn = document.querySelector('#btnComplete, #btnMarkComplete, #btnFinish');
                 if (btn && !btn.disabled) {
                     btn.click();
-                    console.log("Clicked completion button");
                     return true;
                 }
                 return false;
@@ -607,7 +510,6 @@ class VULectureGenie {
                 if (typeof UpdateTabStatus === 'function') {
                     try {
                         UpdateTabStatus("Completed", "0", "-2");
-                        console.log("Called UpdateTabStatus");
                         return true;
                     } catch (e) {
                         return false;
@@ -627,11 +529,8 @@ class VULectureGenie {
     }
 
     async tryNavigateToNext() {
-        console.log("Attempting navigation...");
-
         const nextButton = document.querySelector('#lbtnNextLesson');
         if (!nextButton) {
-            console.log("Next button not found");
             return false;
         }
 
@@ -649,7 +548,6 @@ class VULectureGenie {
             await new Promise(resolve => setTimeout(resolve, 500));
 
             if (window.location.href !== currentUrl) {
-                console.log("Navigation successful via click");
                 return true;
             }
         }
@@ -668,7 +566,6 @@ class VULectureGenie {
         if (nextButton && nextButton.disabled) {
             nextButton.disabled = false;
             nextButton.classList.remove('disabled');
-            console.log("Enabled Next button");
         }
     }
 
@@ -676,7 +573,7 @@ class VULectureGenie {
         try {
             this.settings.autoSkipLecture = !this.settings.autoSkipLecture;
 
-            // Save to localStorage (for immediate use and fallback)
+            // Save to localStorage
             try {
                 const savedSettings = localStorage.getItem('vuGenie_settings');
                 let settings = savedSettings ? JSON.parse(savedSettings) : {};
@@ -684,7 +581,6 @@ class VULectureGenie {
                 localStorage.setItem('vuGenie_settings', JSON.stringify(settings));
             } catch (e) {
                 console.error('Error saving to localStorage:', e);
-                // If parsing failed, create a fresh settings object
                 const settings = { autoSkipAllLectures: this.settings.autoSkipLecture };
                 localStorage.setItem('vuGenie_settings', JSON.stringify(settings));
             }
@@ -696,25 +592,25 @@ class VULectureGenie {
                 }
             }));
 
-            // Update UI
-            const btn = document.querySelector('[data-action="auto-skip-lecture"]');
-            if (btn) {
-                btn.textContent = this.settings.autoSkipLecture ? 'Stop' : 'Auto Skip All Lectures';
-                btn.classList.toggle('active', this.settings.autoSkipLecture);
+            // Update UI button text and skip button state
+            if (this.autoSkipButton) {
+                this.autoSkipButton.textContent = this.settings.autoSkipLecture ? 'Stop' : 'Auto Mark All Lectures';
+                this.autoSkipButton.classList.toggle('active', this.settings.autoSkipLecture);
             }
-            this.updateStatus(this.settings.autoSkipLecture ?
-                'Auto-skip enabled. Skipping lectures...' :
-                'Auto-skip disabled');
 
-            // If enabled, skip current lecture
             if (this.settings.autoSkipLecture) {
+                // Auto-skip enabled: disable skip button and set text
+                this.updateSkipButtonState(true, 'Marking Attendance...');
+                // Immediately skip the current lecture
                 await this.skipLecture();
             } else {
-                this.showNotification('Auto-skip lectures disabled', 'info');
+                // Auto-skip disabled: re-enable skip button and restore text
+                this.updateSkipButtonState(false, 'Mark This Lecture');
+                vu_alerts.show('info', 'Auto Mark All Lectures is disabled', { bounce: true });
             }
         } catch (error) {
             console.error('Error in autoSkipLectures:', error);
-            this.showNotification(`❌ Error: ${error.message}`, 'error');
+            vu_alerts.show('error', 'Error in autoSkipLectures', { bounce: true });
         }
     }
 
@@ -727,57 +623,20 @@ class VULectureGenie {
             autoSaveQuiz: settings.autoSaveQuiz !== false
         };
 
-        // Update UI button text
-        const btn = document.querySelector('[data-action="auto-skip-lecture"]');
-        if (btn) {
-            btn.textContent = this.settings.autoSkipLecture ? 'Stop' : 'Auto Skip All Lectures';
-            btn.classList.toggle('active', this.settings.autoSkipLecture);
+        // Update UI button text and skip button state
+        if (this.autoSkipButton) {
+            this.autoSkipButton.textContent = this.settings.autoSkipLecture ? 'Stop' : 'Auto Mark All Lectures';
+            this.autoSkipButton.classList.toggle('active', this.settings.autoSkipLecture);
         }
 
-        // If auto-skip was just turned ON, skip the current lecture immediately
-        if (!oldAutoSkip && this.settings.autoSkipLecture) {
-            console.log('Auto-skip enabled via settings sync – skipping current lecture');
-            this.skipLecture();
-        }
-    }
-
-    showNotification(message, type = 'info') {
-        const notification = document.createElement('div');
-        notification.textContent = message;
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
-            color: white;
-            padding: 12px 20px;
-            border-radius: 8px;
-            z-index: 10000;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            animation: slideIn 0.3s ease;
-        `;
-
-        document.body.appendChild(notification);
-
-        setTimeout(() => {
-            notification.style.animation = 'slideOut 0.3s ease';
-            setTimeout(() => notification.remove(), 300);
-        }, 3000);
-
-        if (!document.querySelector('#notification-styles')) {
-            const style = document.createElement('style');
-            style.id = 'notification-styles';
-            style.textContent = `
-                @keyframes slideIn {
-                    from { transform: translateX(100%); opacity: 0; }
-                    to { transform: translateX(0); opacity: 1; }
-                }
-                @keyframes slideOut {
-                    from { transform: translateX(0); opacity: 1; }
-                    to { transform: translateX(100%); opacity: 0; }
-                }
-            `;
-            document.head.appendChild(style);
+        if (this.settings.autoSkipLecture) {
+            this.updateSkipButtonState(true, 'Marking Attendance...');
+            // If auto-skip was just turned ON, skip the current lecture immediately
+            if (!oldAutoSkip && this.settings.autoSkipLecture) {
+                this.skipLecture();
+            }
+        } else {
+            this.updateSkipButtonState(false, 'Mark This Lecture');
         }
     }
 }

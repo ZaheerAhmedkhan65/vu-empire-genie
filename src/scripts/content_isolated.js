@@ -1,5 +1,59 @@
 // content_isolated.js - For quizzes
-console.log('VU Empire Genie (ISOLATED World) - Quiz Mode');
+console.log('VU Empire Genie - Quiz Mode');
+
+class AlertManager {
+    constructor(containerId = 'alertContainer', defaultDuration = 4000) {
+        this.container = document.getElementById(containerId);
+
+        if (!this.container) {
+            this.container = document.createElement('div');
+            this.container.id = containerId;
+            document.body.appendChild(this.container);
+        }
+
+        this.defaultDuration = defaultDuration;
+    }
+
+    show(type = 'info', message = '', options = {}) {
+        const alert = document.createElement('div');
+        alert.className = `alert-m ${type}`;
+        if (options.bounce) alert.style.animation = 'slideIn 0.5s forwards, bounce 0.5s 1';
+        alert.innerHTML = `
+            ${options.icon ? `<span class="icon">${options.icon}</span>` : ''}
+            <span class="message">${message}</span>
+            <span class="close-btn">&times;</span>
+        `;
+
+        // Close button
+        alert.querySelector('.close-btn').onclick = () => this.hide(alert);
+
+        // Append to container
+        this.container.appendChild(alert);
+
+        // Auto-dismiss
+        const duration = options.duration || this.defaultDuration;
+        const timeout = setTimeout(() => this.hide(alert), duration);
+
+        // Optional callbacks
+        if (options.onShow) options.onShow(alert);
+
+        // Store timeout to allow clearing if needed
+        alert._timeout = timeout;
+    }
+
+    hide(alert) {
+        if (alert._timeout) clearTimeout(alert._timeout);
+        alert.style.animation = 'slideOut 0.5s forwards';
+        setTimeout(() => alert.remove(), 500);
+    }
+
+    hideAll() {
+        const alerts = this.container.querySelectorAll('.alert-m');
+        alerts.forEach(alert => this.hide(alert));
+    }
+}
+
+const vu_alerts = new AlertManager();
 
 class VUQuizGenie {
     constructor() {
@@ -7,6 +61,9 @@ class VUQuizGenie {
         this.isInitialized = false;
         this.chromeAvailable = false;
         this.apiKey = null;
+        this.cachedQuizData = null;          // Stores the last extracted quiz
+        this.cacheTimestamp = 0;              // Time of last extraction
+        this.cacheTTL = 5000;       // 5 seconds – re-extract if older
         this.settings = this.getDefaultSettings();
         this.init();
     }
@@ -23,6 +80,13 @@ class VUQuizGenie {
         };
     }
 
+    isChromeApiAvailable() {
+        return typeof chrome !== 'undefined' &&
+            chrome.runtime &&
+            typeof chrome.runtime.id === 'string' && // context is valid
+            typeof chrome.runtime.sendMessage === 'function';
+    }
+
     async init() {
         if (this.isInitialized) return;
 
@@ -32,10 +96,19 @@ class VUQuizGenie {
         // Wait for page to load
         await this.waitForPageReady();
 
+        window.addEventListener('popstate', () => {
+            // Invalidate cache so that next action re‑extracts
+            this.cachedQuizData = null;
+        });
+
         // Inject UI
         this.injectUI();
-        this.isInitialized = true;
 
+        // NEW: Pre‑extract quiz data and cache it
+        await this.extractAndCacheQuizData();
+        
+        this.isInitialized = true;
+        vu_alerts.show('success', 'VU Empire Genie initialized');
         // Check and run auto-solve if enabled
         await this.checkAndRunAutoSolve();
     }
@@ -44,7 +117,6 @@ class VUQuizGenie {
         try {
             if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
                 this.chromeAvailable = true;
-                console.log('✅ Chrome APIs available in ISOLATED world');
 
                 // Get API key
                 this.apiKey = await this.getApiKeySafely();
@@ -55,7 +127,6 @@ class VUQuizGenie {
                 // Store settings in localStorage for fallback
                 this.saveSettingsToLocalStorage();
             } else {
-                console.log('⚠️ Chrome APIs not available');
                 this.chromeAvailable = false;
                 this.loadSettingsFromLocalStorage();
             }
@@ -183,264 +254,180 @@ class VUQuizGenie {
     injectUI() {
         if (document.getElementById('vu-genie-ui')) return;
 
-        const floatingBtnContainer = document.createElement("div");
-        floatingBtnContainer.classList.add("floating-btn-container");
-        const floatingBtn = document.createElement("button");
-        floatingBtn.innerHTML = 'vu'
-        floatingBtn.classList.add("floating-btn", "hide");
-        floatingBtnContainer.appendChild(floatingBtn);
-        document.body.appendChild(floatingBtnContainer);
-
         const container = document.createElement('div');
         container.id = 'vu-genie-ui';
         container.innerHTML = `
-            <div class="vu-genie-container">
-                <div class="vu-genie-content-wrapper">
-                    <div class="vu-genie-content" id="vu-genie-content">
-                        <button class="vu-btn primary" data-action="copy-quiz">
-                            Copy Quiz
-                        </button>
-
-                        <button class="vu-btn secondary" data-action="solve-with-ai">
-                            Solve with AI
-                        </button>
-
-                        <button class="vu-btn" data-action="download-pdf">
-                            Download Quiz
-                        </button>
-                    </div>
-                    <button class="vu-genie-close">×</button>
+        <div class="vu-genie-container">
+            <div class="vu-genie-content-wrapper">
+                <div class="vu-genie-content" id="vu-genie-content">
+                    <button class="vu-btn" id="vu-copy-quiz" data-action="copy-quiz">
+                        Copy Quiz
+                    </button>
+                    <button class="vu-btn primary" id="vu-solve-quiz" data-action="solve-with-ai">
+                        Solve Question
+                    </button>
                 </div>
-                <div class="vu-genie-status" id="vu-genie-status">Ready</div>
             </div>
-        `;
+        </div>
+    `;
 
-        // Add styles
-        this.injectStyles();
         document.body.appendChild(container);
         this.attachEventListeners();
     }
 
-    injectStyles() {
-        // Same styles as content_main.js
-        const style = document.createElement('style');
-        style.textContent = `
-            #vu-genie-ui {
-                min-width: 250px;
-                position: fixed;
-                bottom: 20px;
-                right: calc(50% - 175px);
-                z-index: 10000;
-                font-family: 'Segoe UI', Arial, sans-serif;
-            }
+    attachEventListeners() {
+        this.solveButton = document.getElementById('vu-solve-quiz');
+        this.copyButton = document.getElementById('vu-copy-quiz');
 
-            .vu-genie-container {
-                background: rgba(0, 64, 128, 0.95);
-                backdrop-filter: blur(10px);
-                border-radius: 12px;
-                padding: 10px 15px 5px;
-                min-width: 250px;
-                color: white;
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-                animation: slideUp 0.3s ease;
-            }
+        if (this.solveButton) {
+            this.solveButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.handleAction('solve-with-ai');
+            });
+        }
 
-            .floating-btn-container{
-                position: fixed;
-                bottom: 40px;
-                right: 40px;
-                text-align: end;
-            }
-
-            .floating-btn{
-                background-color: rgba(0, 64, 128, 0.95);
-                color: white;
-                font-size: 22px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding: 20px;
-                border-radius: 50%;
-                border: none;
-                outline: none;
-                text-transform: uppercase;
-                font-weight: bold;
-            }
-
-            .show{
-                display: block !important;
-            }
-
-            .hide{
-                display: none !important;
-            }
-
-            @keyframes slideUp {
-                from { transform: translateY(100px); opacity: 0; }
-                to { transform: translateY(0); opacity: 1; }
-            }
-
-            .vu-genie-close {
-                background: red;
-                border: none;
-                outline:none;
-                color: white;
-                font-size: 24px;
-                cursor: pointer;
-                padding: 0;
-                width: 24px;
-                height: 24px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border-radius: 50%;
-                position: absolute;
-                top: -8px;
-                right: -8px;
-            }
-
-            .vu-genie-close:hover {
-                background: rgba(255, 255, 255, 0.1);
-                color: black;
-            }
-
-            .vu-genie-content-wrapper {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-
-            .vu-genie-content {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 18px;
-            }
-
-            .vu-btn {
-                padding: 5px 10px;
-                border: none;
-                border-radius: 8px;
-                cursor: pointer;
-                font-weight: 600;
-                font-size: 14px;
-                transition: all 0.2s;
-            }
-
-            .vu-btn:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            }
-
-            .vu-btn.primary {
-                background: #10b981;
-                color: white;
-            }
-
-            .vu-genie-status {
-                margin-top: 10px;
-                padding-top: 5px;
-                border-top: 1px solid rgba(255, 255, 255, 0.1);
-                font-size: 12px;
-                opacity: 0.8;
-                text-align: center;
-            }
-            
-            .vu-btn.primary {
-                background: #10b981;
-                color: white;
-            }
-            
-            .vu-btn.secondary {
-                background: #8b5cf6;
-                color: white;
-            }
-        `;
-        document.head.appendChild(style);
+        if (this.copyButton) {
+            this.copyButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.handleAction('copy-quiz');
+            });
+        }
     }
 
-    attachEventListeners() {
-        const container = document.getElementById('vu-genie-ui');
-        const floatingBtn = document.querySelector(".floating-btn");
+    disableButton(button, text) {
+        if (!button) return;
+        button.disabled = true;
+        button.dataset.originalText = button.innerHTML;
+        button.innerHTML = text || 'Processing...';
+    }
 
-        // Close button
-        container.querySelector('.vu-genie-close').addEventListener('click', () => {
-            container.style.display = 'none';
-            floatingBtn.classList.remove('hide');
-            floatingBtn.classList.add('show');
-        });
+    enableButton(button) {
+        if (!button) return;
+        button.disabled = false;
+        button.innerHTML = button.dataset.originalText || 'Copy Quiz'; // fallback
+    }
 
-        floatingBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            container.style.display = 'block';
-            floatingBtn.classList.remove('show');
-            floatingBtn.classList.add('hide');
-        })
+    // For copy button, we want a temporary disable with a countdown (optional)
+    async disableCopyButtonTemporarily(duration = 3000) {
+        if (!this.copyButton) return;
+        const original = this.copyButton.innerText;
+        this.copyButton.disabled = true;
+        this.copyButton.innerText = 'Copied!';
+        await new Promise(resolve => setTimeout(resolve, duration));
+        this.copyButton.disabled = false;
+        this.copyButton.innerText = original;
+    }
 
-        // Action buttons
-        container.querySelectorAll('.vu-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const action = e.target.dataset.action;
-                this.handleAction(action);
-            });
-        });
+    async extractAndCacheQuizData() {
+        try {
+            const quizData = {
+                question: this.extractQuizQuestion(),
+                options: this.extractQuizOptionsWithIndices(),
+                courseCode: this.getCourseInfo().code,
+                courseName: this.getCourseInfo().name,
+                studentId: this.extractStudentInfo().studentId,
+                studentName: this.extractStudentInfo().studentName,
+                timestamp: new Date().toISOString(),
+                url: window.location.href
+            };
+
+            // Basic validation – if no question/options, don't cache
+            if (!quizData.question || quizData.options.length === 0) {
+                console.warn('Failed to extract valid quiz data');
+                return null;
+            }
+
+            this.cachedQuizData = quizData;
+            this.cacheTimestamp = Date.now();
+            this.saveRawQuizToStorage(quizData).catch(err =>
+                console.warn('Could not save raw quiz to storage:', err)
+            );
+
+            return quizData;
+        } catch (error) {
+            console.error('Error extracting quiz data:', error);
+            return null;
+        }
+    }
+
+    async ensureFreshCache() {
+        // If no cache, extract immediately
+        if (!this.cachedQuizData) {
+            return await this.extractAndCacheQuizData();
+        }
+
+        // Optional: detect if the question element changed
+        const currentQuestionText = this.extractQuizQuestion();
+        if (currentQuestionText !== this.cachedQuizData.question) {
+            // Question changed – update cache
+            return await this.extractAndCacheQuizData();
+        }
+
+        // If cache is still fresh (within TTL), return it
+        if (Date.now() - this.cacheTimestamp < this.cacheTTL) {
+            return this.cachedQuizData;
+        }
+
+        // Otherwise re‑extract
+        return await this.extractAndCacheQuizData();
     }
 
     async handleAction(action) {
-        this.updateStatus('Processing...');
+        // Determine which button triggered the action
+        let button = null;
+        if (action === 'solve-with-ai') button = this.solveButton;
+        else if (action === 'copy-quiz') button = this.copyButton;
 
-        switch (action) {
-            case 'solve-with-ai':
-                await this.solveWithAI();
-                break;
-            case 'copy-quiz':
-                await this.copyQuiz();
-                break;
-            case 'download-pdf':
-                await this.downloadQuizPdf();
-                break;
-            case 'open-options':
-                if (this.chromeAvailable) {
-                    chrome.runtime.sendMessage({ type: 'OPEN_OPTIONS' });
-                }
-                break;
-        }
+        // Prevent double-clicking
+        if (button && button.disabled) return;
 
-        this.updateStatus('Ready');
-    }
-
-    updateStatus(message) {
-        const statusElement = document.getElementById('vu-genie-status');
-        if (statusElement) {
-            statusElement.textContent = message;
+        try {
+            switch (action) {
+                case 'solve-with-ai':
+                    this.disableButton(button, 'Solving...');
+                    await this.solveWithAI();
+                    break;
+                case 'copy-quiz':
+                    // For copy, we disable and re-enable after a fixed time
+                    this.disableButton(button, 'Copying...');
+                    // Perform copy (it's fast, but we'll still await it)
+                    await this.copyQuiz(button);
+                    break;
+                case 'open-options':
+                    if (this.chromeAvailable) {
+                        chrome.runtime.sendMessage({ type: 'OPEN_OPTIONS' });
+                    }
+                    break;
+            }
+        } catch (error) {
+            console.error(`Error in ${action}:`, error);
+            // Re-enable button immediately on error
+            if (button) this.enableButton(button);
+        } finally {
+            // For solve-with-ai, we re-enable after completion (even if error)
+            if (action === 'solve-with-ai' && button) {
+                this.enableButton(button);
+            }
+            // For copy, we already have a timeout; do nothing else
         }
     }
 
     async solveWithAI() {
         try {
-            this.updateStatus('Extracting quiz...');
             // Extract quiz data
-            const quizData = await this.extractQuizForAI();
-
+            const quizData = await this.ensureFreshCache();
+            console.log('Extracted quiz data:', quizData);
             if (!quizData || !quizData.question || quizData.options.length === 0) {
-                this.showNotification('❌ Could not extract quiz question', 'error');
+                vu_alerts.show('error', 'Could not extract quiz question', { bounce: true });
                 return;
             }
 
-            console.log('Quiz data extracted:', quizData);
-
-            // Get API key via message to background script
-            this.updateStatus('Getting API key...');
-            // const apiKey = await this.getApiKeyFromBackground();
-
             if (!this.apiKey) {
-                this.showNotification('Please set your Gemini API key in extension settings', 'error');
+                vu_alerts.show('success','Please set your Gemini API key in extension settings', { bounce: true });
                 // Open options page
                 chrome.runtime.sendMessage({ type: 'OPEN_OPTIONS' });
                 return;
             }
-
-            this.updateStatus('Solving with Gemini AI...');
 
             // Get AI response
             const aiResponse = await this.getGeminiQuizResponse(quizData, this.apiKey);
@@ -450,9 +437,7 @@ class VUQuizGenie {
 
         } catch (error) {
             console.error('Error in solveWithAI:', error);
-            this.showNotification(`❌ AI Error: ${error.message}`, 'error');
-        } finally {
-            this.updateStatus('Ready');
+            vu_alerts.show('error', 'Failed to solve with AI', { bounce: true });
         }
     }
 
@@ -543,8 +528,6 @@ class VUQuizGenie {
 
     extractQuizQuestion() {
         try {
-            console.log('Extracting quiz question...');
-
             // Multiple strategies to extract question text
 
             // Strategy 1: Look for textarea with question (CS205 format)
@@ -552,7 +535,6 @@ class VUQuizGenie {
             for (const textarea of questionTextareas) {
                 const text = textarea.value?.trim() || textarea.textContent?.trim();
                 if (text && text.length > 10 && !text.match(/[A-Za-z0-9]{20,}/)) {
-                    console.log('Found question in textarea:', text.substring(0, 100));
                     return text;
                 }
             }
@@ -565,7 +547,6 @@ class VUQuizGenie {
                 if (paragraphs.length > 0) {
                     const text = Array.from(paragraphs).map(p => p.textContent.trim()).join(' ');
                     if (text && text.length > 10) {
-                        console.log('Found question in span paragraphs:', text.substring(0, 100));
                         return text;
                     }
                 }
@@ -573,7 +554,6 @@ class VUQuizGenie {
                 // Fallback to span text
                 const text = span.textContent.trim();
                 if (text && text.length > 10) {
-                    console.log('Found question in span text:', text.substring(0, 100));
                     return text;
                 }
             }
@@ -586,7 +566,6 @@ class VUQuizGenie {
                 for (const textarea of noselectTextareas) {
                     const text = textarea.value?.trim() || textarea.textContent?.trim();
                     if (text && text.length > 20 && text.includes('?') && !text.match(/[A-Za-z0-9]{15,}/)) {
-                        console.log('Found question in noselect textarea:', text.substring(0, 100));
                         return text;
                     }
                 }
@@ -598,7 +577,6 @@ class VUQuizGenie {
                     if (text && text.length > 20 &&
                         (text.includes('?') || text.includes('_________')) &&
                         !text.match(/[A-Za-z0-9]{15,}/)) {
-                        console.log('Found question in noselect span:', text.substring(0, 100));
                         return text;
                     }
                 }
@@ -615,7 +593,6 @@ class VUQuizGenie {
                             text.match(/^[A-Z]/) || text.includes('.')) &&
                         !text.match(/[A-Za-z0-9]{20,}/) &&
                         !text.includes('Lrwio') && !text.includes('p8iOy')) {
-                        console.log('Found question in visible element:', text.substring(0, 100));
                         return text;
                     }
                 }
@@ -657,7 +634,6 @@ class VUQuizGenie {
         for (const selector of optionSelectors) {
             optionElements = Array.from(document.querySelectorAll(selector));
             if (optionElements.length >= 2) {
-                console.log(`Found ${optionElements.length} options using selector: ${selector}`);
                 break;
             }
         }
@@ -672,7 +648,6 @@ class VUQuizGenie {
                     const text = el.textContent || el.value || '';
                     return text.trim().length > 5; // Filter out empty/short elements
                 });
-                console.log(`Found ${optionElements.length} options in answer table`);
             }
         }
 
@@ -701,14 +676,11 @@ class VUQuizGenie {
                     element: el,
                     radioButton: radioButton
                 });
-
-                console.log(`Option ${index} (${String.fromCharCode(65 + index)}): "${text.substring(0, 50)}..."`);
             }
         });
 
         // If still no options, try a more aggressive approach
         if (options.length === 0) {
-            console.log('Using aggressive option extraction');
             this.extractOptionsAggressive(options);
         }
 
@@ -735,8 +707,6 @@ class VUQuizGenie {
         try {
             // Check if auto-solve is enabled and API key is available
             if (this.settings.autoSolve && this.apiKey) {
-                console.log('Auto-solve enabled, running AI solve...');
-
                 // Add a small delay to ensure page is fully loaded
                 await new Promise(resolve => setTimeout(resolve, 2000));
 
@@ -758,32 +728,28 @@ class VUQuizGenie {
     // Add method to auto-save and go to next question
     async autoSaveAndNext() {
         try {
-            console.log('Auto-saving and moving to next question...');
-
             // Find the save/next button
             const nextButton = document.getElementById('btnSave');
 
             if (nextButton && !nextButton.disabled) {
-                console.log('Clicking save/next button...');
-
                 // Click the button
                 nextButton.click();
 
                 // Wait a bit for the next question to load
                 await new Promise(resolve => setTimeout(resolve, 3000));
 
+                // NEW: re‑extract cache for the new question
+                await this.extractAndCacheQuizData();
+
                 // Check if we're still on a quiz page (not finished)
                 if (window.location.href.includes('/Quiz/') &&
                     !window.location.href.includes('QuizFinished.aspx')) {
-                    console.log('Next question loaded, running auto-solve again...');
 
                     // Re-initialize for the new question
                     this.isInitialized = false;
                     await this.init();
                 }
             } else if (nextButton && nextButton.disabled) {
-                console.log('Save button is disabled, trying to enable it...');
-
                 // Try to trigger EnableNextButton if it exists
                 if (typeof window.EnableNextButton === 'function') {
                     window.EnableNextButton();
@@ -831,7 +797,6 @@ class VUQuizGenie {
                                 ...this.getDefaultSettings(),
                                 ...settings
                             };
-                            console.log('Settings loaded from Chrome storage:', this.settings);
                             resolve(this.settings);
                         }
                     }
@@ -853,7 +818,6 @@ class VUQuizGenie {
                     ...this.getDefaultSettings(),
                     ...parsedSettings
                 };
-                console.log('Settings loaded from localStorage:', this.settings);
             }
         } catch (error) {
             console.error('Error loading settings from localStorage:', error);
@@ -863,7 +827,6 @@ class VUQuizGenie {
     saveSettingsToLocalStorage() {
         try {
             localStorage.setItem('vuGenie_settings', JSON.stringify(this.settings));
-            console.log('Settings saved to localStorage:', this.settings);
         } catch (error) {
             console.error('Error saving settings to localStorage:', error);
         }
@@ -878,39 +841,26 @@ class VUQuizGenie {
                 throw new Error('Could not parse AI response');
             }
 
-            console.log('Parsed solution:', solution);
-            console.log('Current settings:', this.settings);
-
             // Show solution popup if enabled
             if (this.settings.showSolution) {
-                console.log('Showing solution popup (showSolution is true)');
                 this.displayQuizSolution(quizData, solution);
-            } else {
-                console.log('Skipping solution popup (showSolution is false)');
             }
 
             // Auto-select correct answers if enabled
             if (this.settings.autoSelect) {
-                console.log('Auto-selecting answer (autoSelect is true)');
                 await this.autoSelectQuizAnswers(solution.correctAnswers, quizData.options);
-            } else {
-                console.log('Skipping auto-select (autoSelect is false)');
             }
+
+            await this.updateRawQuizWithSolution(quizData, solution);
 
             // Save quiz data for future reference
             if (this.settings.autoSaveQuiz) {
-                console.log('Saving quiz data (autoSaveQuiz is true)');
                 await this.saveQuizData(quizData, solution);
-            } else {
-                console.log('Skipping save (autoSaveQuiz is false)');
             }
 
             // Auto-save and move to next question if enabled
             if (this.settings.autoSaveAfterSolve) {
-                console.log('Auto-saving and moving to next question (autoSaveAfterSolve is true)');
                 await this.autoSaveAndNext();
-            } else {
-                console.log('Skipping auto-save after solve (autoSaveAfterSolve is false)');
             }
 
         } catch (error) {
@@ -965,10 +915,7 @@ class VUQuizGenie {
             const data = await response.json();
             const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
-
-            console.log('Gemini response:', aiText);
             return aiText;
-
         } catch (error) {
             console.error('Gemini API error:', error);
             throw error;
@@ -976,8 +923,6 @@ class VUQuizGenie {
     }
 
     parseAIResponse(aiResponse, options) {
-        console.log('Parsing AI response:', aiResponse.substring(0, 200) + '...');
-
         let correctAnswers = [];
         let explanation = '';
 
@@ -998,7 +943,6 @@ class VUQuizGenie {
             const match = aiResponse.match(pattern);
             if (match) {
                 const letters = match[1].split(',').map(l => l.trim().toUpperCase());
-                console.log(`Extracted letters from pattern ${pattern}:`, letters);
 
                 // Validate letters are A-D
                 const validLetters = letters.filter(l => /^[A-D]$/.test(l));
@@ -1016,7 +960,6 @@ class VUQuizGenie {
                 const letter = singleLetterMatch[1].toUpperCase();
                 if (/^[A-D]$/.test(letter)) {
                     correctAnswers = [letter];
-                    console.log(`Found single letter answer: ${letter}`);
                 }
             }
         }
@@ -1059,11 +1002,6 @@ class VUQuizGenie {
             explanation = explanationLines.join(' ').trim();
         }
 
-        console.log('Parsed solution:', {
-            correctAnswers,
-            explanation: explanation.substring(0, 100) + (explanation.length > 100 ? '...' : '')
-        });
-
         return {
             correctAnswers,
             explanation,
@@ -1086,133 +1024,65 @@ class VUQuizGenie {
         text += `\nEXPLANATION:\n${solution.explanation || 'No explanation provided.'}\n`;
         return text;
     }
-
+    
     displayQuizSolution(quizData, solution) {
-        // Create solution popup
         const popup = document.createElement('div');
+        const container = document.querySelector(".vu-genie-container");
         popup.id = 'vu-genie-quiz-solution';
-        popup.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 25px;
-        border-radius: 15px;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        z-index: 10001;
-        max-width: 600px;
-        max-height: 80vh;
-        overflow-y: auto;
-        font-family: 'Segoe UI', Arial, sans-serif;
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255,255,255,0.2);
-    `;
 
         let solutionHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h3 style="margin: 0; font-size: 20px; display: flex; align-items: center; gap: 10px;">
-                <span style="font-size: 24px;">Solution</span>
-            </h3>
-            <button id="close-solution" style="background: rgba(255,255,255,0.2); border: none; color: white; font-size: 20px; cursor: pointer; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; padding: 0 10px;">
+    `;
+
+        //  Correct Answer Section
+        if (solution.correctAnswers.length > 0) {
+            solutionHTML += `
+            <div style="padding: 0 5px 0 0">
+                <div style="font-size: 22px; font-weight: bold;">
+                    ${solution.correctAnswers.map(letter => {
+                const option = quizData.options.find(opt => opt.letter === letter);
+                        return `Option ${letter}: <span style="font-whight:600; color:#10b981;">${option ? option.text : letter}</span>`;
+            }).join('<br>')}
+                </div>
+            </div>
+        `;
+        }
+
+        solutionHTML += `
+            <button id="close-solution" style="background: rgba(255,255,255,0.5); border: none; font-size: 20px; cursor: pointer; width: 30px; height: 25px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
                 ×
             </button>
         </div>
-
-        <div style="font-weight: bold; margin-bottom: 10px; opacity: 0.9;">Question:</div>
-        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin-bottom: 20px;">
-            <div style="line-height: 1.5;">${quizData.question}</div>
-        </div>
-        
-        <div style="font-weight: bold; margin-bottom: 10px; opacity: 0.9;">Options:</div>
-        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin-bottom: 20px;">
-    `;
-
-        quizData.options.forEach((opt, index) => {
-            const isCorrect = solution.correctAnswers.some(correct =>
-                correct.includes(opt.text.substring(0, 30)) || opt.text.includes(correct.substring(0, 30))
-            );
-
-            solutionHTML += `
-            <div style="margin-bottom: 8px; padding: 8px 12px; border-radius: 6px; ${isCorrect ? 'background: rgba(72, 187, 120, 0.3); border-left: 4px solid #48bb78;' : 'background: rgba(255,255,255,0.05);'}">
-                <span style="font-weight: bold; margin-right: 10px;">${opt.letter}.</span>
-                ${opt.text}
-                ${isCorrect ? '<span style="margin-left: 10px; color: #48bb78;">✓</span>' : ''}
-            </div>
         `;
-        });
 
-        solutionHTML += `</div>`;
-
-        if (solution.correctAnswers.length > 0) {
-            solutionHTML += `
-    <div style="background: rgba(72, 187, 120, 0.2); padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #48bb78;">
-        <div style="font-weight: bold; margin-bottom: 10px; color: #48bb78;">Correct Answer${solution.correctAnswers.length > 1 ? 's' : ''}:</div>
-        <div style="font-size: 18px; font-weight: bold;">${solution.correctAnswers.map((letter, i) => {
-                const option = quizData.options.find(opt => opt.letter === letter);
-                return `${letter}. ${option ? option.text : letter}`;
-            }).join('<br>')}</div>
-    </div>
-    `;
-        }
-
+        //  Explanation Section
         if (solution.explanation) {
             solutionHTML += `
-            <div style="background: rgba(66, 153, 225, 0.2); padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #4299e1;">
-                <div style="font-weight: bold; margin-bottom: 10px; color: #4299e1;">Explanation:</div>
+            <div style="padding:0 10px 5px;">
+                <div style="font-weight: bold; margin-bottom: 5px;">Explanation :</div>
                 <div style="line-height: 1.5;">${solution.explanation}</div>
             </div>
         `;
         }
 
-        // Add action buttons
-        solutionHTML += `
-        <div style="display: flex; gap: 10px; margin-top: 20px;">
-            <button id="copy-solution-btn" style="flex: 1; padding: 12px; background: #4299e1; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                Copy Solution
-            </button>
-        </div>
-        
-        <div style="margin-top: 15px; text-align: center; font-size: 12px; opacity: 0.7;">
-            Powered by VU EMPIRE
-        </div>
-    `;
-
         popup.innerHTML = solutionHTML;
-        document.body.appendChild(popup);
+        container.appendChild(popup);
 
-        // Add event listeners
         popup.querySelector('#close-solution').addEventListener('click', () => {
-            popup.style.animation = 'slideOut 0.3s ease';
-            setTimeout(() => popup.remove(), 300);
+            popup.remove();
         });
 
-        popup.querySelector('#copy-solution-btn').addEventListener('click', () => {
-            const text = this.formatSolutionForCopy(quizData, solution);
-            navigator.clipboard.writeText(text).then(() => {
-                popup.querySelector('#copy-solution-btn').innerHTML = 'Copied!';
-                setTimeout(() => {
-                    popup.querySelector('#copy-solution-btn').innerHTML = 'Copy Solution';
-                }, 2000);
-            });
-        });
-
-        // Add escape key to close
         document.addEventListener('keydown', function closeOnEscape(e) {
             if (e.key === 'Escape') {
-                popup.style.animation = 'slideOut 0.3s ease';
-                setTimeout(() => popup.remove(), 300);
+                popup.remove();
                 document.removeEventListener('keydown', closeOnEscape);
             }
         });
     }
 
+
     async autoSelectQuizAnswers(correctAnswers, options) {
         try {
-            console.log('Auto-selecting answers:', correctAnswers);
-            console.log('Available options:', options);
-
             let selectedCount = 0;
 
             // First, try to select by letter
@@ -1222,30 +1092,24 @@ class VUQuizGenie {
                 const letter = letterMatch ? letterMatch[0].toUpperCase() : null;
 
                 if (letter) {
-                    console.log(`Trying to select option by letter: ${letter}`);
                     const option = options.find(opt => opt.letter === letter);
                     if (option) {
-                        console.log(`Found option ${letter}: ${option.text}`);
                         if (await this.selectOptionByIndex(option.index)) {
                             selectedCount++;
-                            console.log(`✅ Selected option ${letter}`);
                             continue;
                         }
                     }
                 }
 
                 // If letter matching fails, try text matching
-                console.log(`Trying text matching for: ${answer}`);
                 for (const option of options) {
                     // Clean both texts for comparison
                     const cleanAnswer = answer.replace(/[^A-Za-z ]/g, '').toLowerCase().trim();
                     const cleanOptionText = option.text.replace(/[^A-Za-z ]/g, '').toLowerCase().trim();
 
                     if (cleanOptionText.includes(cleanAnswer) || cleanAnswer.includes(cleanOptionText)) {
-                        console.log(`Text match found: ${option.text} matches ${answer}`);
                         if (await this.selectOptionByIndex(option.index)) {
                             selectedCount++;
-                            console.log(`✅ Selected option by text match`);
                             break;
                         }
                     }
@@ -1253,29 +1117,26 @@ class VUQuizGenie {
             }
 
             if (selectedCount > 0) {
-                this.showNotification(`✅ ${selectedCount} answer${selectedCount > 1 ? 's' : ''} selected`, 'success');
+                vu_alerts.show('success', `${selectedCount} answer${selectedCount > 1 ? 's' : ''} selected`);
             } else {
                 console.warn('Could not auto-select any answers');
-                this.showNotification('⚠️ Could not auto-select. Please select manually.', 'warning');
+                vu_alerts.show('warning', 'Could not auto-select. Please select manually.', { bounce: true });
             }
 
         } catch (error) {
             console.error('Error auto-selecting:', error);
-            this.showNotification('❌ Auto-select failed', 'error');
+            vu_alerts.show('error', 'Error auto-selecting answers', { bounce: true });
         }
     }
 
     // Also update the selectOptionByIndex method to handle both formats:
     async selectOptionByIndex(index) {
         try {
-            console.log(`Attempting to select option ${index}`);
-
             // Method 1: Try radio button by ID
             const radioButtonId = `radioBtn${index}`;
             let radioButton = document.getElementById(radioButtonId);
 
             if (radioButton) {
-                console.log(`Found radio button ${radioButtonId}`);
                 return this.selectRadioButton(radioButton);
             }
 
@@ -1285,7 +1146,6 @@ class VUQuizGenie {
                 const radioButtons = answerTable.querySelectorAll('input[type="radio"]');
                 if (radioButtons.length > index) {
                     radioButton = radioButtons[index];
-                    console.log(`Found radio button at index ${index} in answer table`);
                     return this.selectRadioButton(radioButton);
                 }
             }
@@ -1301,7 +1161,6 @@ class VUQuizGenie {
             for (const selector of optionSelectors) {
                 const element = document.querySelector(selector);
                 if (element) {
-                    console.log(`Clicking option element: ${selector}`);
                     element.click();
 
                     // Also try to find and check the associated radio button
@@ -1391,15 +1250,13 @@ class VUQuizGenie {
                 try {
                     EnableNextButton();
                 } catch (e) {
-                    console.log('EnableNextButton function exists but threw error:', e.message);
+                    console.error('EnableNextButton function exists but threw error:', e.message);
                 }
             } else {
-                console.log('EnableNextButton function not found on this page');
                 // Try to enable the Next button manually
                 const nextButton = document.getElementById('btnSave');
                 if (nextButton && nextButton.disabled) {
                     nextButton.disabled = false;
-                    console.log('✅ Manually enabled Next button');
                 }
             }
 
@@ -1416,9 +1273,7 @@ class VUQuizGenie {
                 }
             }
 
-            console.log(`Successfully selected radio button`);
             return true;
-
         } catch (error) {
             console.error('Error selecting radio button:', error);
             return false;
@@ -1468,20 +1323,49 @@ class VUQuizGenie {
     }
 
     async saveToBackgroundStorage(data) {
-        return new Promise((resolve, reject) => {
-            chrome.runtime.sendMessage(data, (response) => {
-                if (chrome.runtime.lastError) {
-                    reject(chrome.runtime.lastError);
-                } else {
-                    resolve(response);
-                }
+        // First, try to use Chrome APIs if available
+        if (this.isChromeApiAvailable()) {
+            return new Promise((resolve, reject) => {
+                chrome.runtime.sendMessage(data, (response) => {
+                    if (chrome.runtime.lastError) {
+                        reject(chrome.runtime.lastError);
+                    } else {
+                        resolve(response);
+                    }
+                });
             });
-        });
+        }
+
+        // Fallback: extension context invalid – save to localStorage
+        console.warn('Extension context invalid, saving quiz data to localStorage');
+        return this.saveQuizDataToLocalStorage(data.data);
+    }
+
+    async saveQuizDataToLocalStorage(quizData) {
+        try {
+            const storageKey = 'vuGenie_quizData';
+            const existing = localStorage.getItem(storageKey);
+            let quizArray = existing ? JSON.parse(existing) : [];
+
+            quizArray.push({
+                ...quizData,
+                savedAt: new Date().toISOString()
+            });
+
+            // Keep only the last 1000 quizzes to avoid quota issues
+            if (quizArray.length > 1000) {
+                quizArray = quizArray.slice(-1000);
+            }
+
+            localStorage.setItem(storageKey, JSON.stringify(quizArray));
+        } catch (error) {
+            console.error('❌ Failed to save quiz to localStorage:', error);
+            throw error; // re-throw if necessary
+        }
     }
 
     async saveQuizData(quizData, solution) {
         try {
-            // Save to background script storage
             await this.saveToBackgroundStorage({
                 type: 'SAVE_QUIZ_DATA',
                 data: {
@@ -1490,26 +1374,40 @@ class VUQuizGenie {
                     timestamp: new Date().toISOString()
                 }
             });
-
-            console.log('Quiz saved with AI solution');
-
         } catch (error) {
             console.error('Error saving quiz:', error);
+            // The fallback inside saveToBackgroundStorage may have already run,
+            // but if it didn't (e.g., error in the promise itself), we try local save directly.
+            if (!this.isChromeApiAvailable()) {
+                await this.saveQuizDataToLocalStorage({
+                    ...quizData,
+                    solution,
+                    timestamp: new Date().toISOString()
+                });
+            }
         }
     }
 
-    async copyQuiz() {
-        const quizData = this.extractFullQuiz();
+    async copyQuiz(button) {
+        const quizData = await this.ensureFreshCache();
+        if (!quizData || !quizData.question || quizData.options.length === 0) {
+            vu_alerts.show('error', 'Could not extract quiz question', { bounce: true });
+            // Wait 3 seconds before re-enablingz
+            this.enableButton(button)
+            return;
+        }
         const text = this.formatQuizText(quizData);
 
         await navigator.clipboard.writeText(text);
-        this.showNotification('Quiz question copied to clipboard', 'success');
+        // Wait 0.5 seconds before re-enablingz
+        setTimeout(() => this.enableButton(button), 500);
+        vu_alerts.show('success', 'Quiz copied to clipboard');
     }
 
     extractFullQuiz() {
         const question = this.extractQuizQuestion();
-        const options = this.extractQuizOptions();
-
+        const options = this.extractQuizOptionsWithIndices(); 
+        console.log('Extracted options:', options);
         return {
             question,
             options,
@@ -1539,18 +1437,58 @@ class VUQuizGenie {
         }
     }
 
-    extractQuizOptions() {
-        const options = [];
-        const optionElements = document.querySelectorAll('table table table td > div span[id^="lblExpression"]');
+    generateQuizId(quizData) {
+        const base = `${quizData.studentId}|${quizData.courseCode}|${quizData.question.replace(/\s+/g, ' ').trim()}`;
+        let hash = 0;
+        for (let i = 0; i < base.length; i++) {
+            hash = ((hash << 5) - hash) + base.charCodeAt(i);
+            hash |= 0; // convert to 32-bit integer
+        }
+        return `quiz_${Math.abs(hash)}`;
+    }
 
-        optionElements.forEach((el, index) => {
-            options.push({
-                letter: String.fromCharCode(65 + index),
-                text: el.textContent.trim()
+    async saveRawQuizToStorage(quizData) {
+        const id = this.generateQuizId(quizData);
+        const record = {
+            ...quizData,
+            id,
+            solved: false,
+            solution: null,
+            savedAt: new Date().toISOString()
+        };
+        return new Promise((resolve) => {
+            chrome.storage.local.get(['vuQuizBank'], (result) => {
+                const bank = result.vuQuizBank || {};
+                bank[id] = record;
+                chrome.storage.local.set({ vuQuizBank: bank }, resolve);
             });
         });
+    }
 
-        return options;
+    async updateRawQuizWithSolution(quizData, solution) {
+        const id = this.generateQuizId(quizData);
+        return new Promise((resolve) => {
+            chrome.storage.local.get(['vuQuizBank'], (result) => {
+                const bank = result.vuQuizBank || {};
+                if (bank[id]) {
+                    bank[id].solved = true;
+                    bank[id].solution = solution;
+                    bank[id].updatedAt = new Date().toISOString();
+                    chrome.storage.local.set({ vuQuizBank: bank }, resolve);
+                } else {
+                    // If not found (shouldn't happen), create a new solved entry
+                    const record = {
+                        ...quizData,
+                        id,
+                        solved: true,
+                        solution,
+                        savedAt: new Date().toISOString()
+                    };
+                    bank[id] = record;
+                    chrome.storage.local.set({ vuQuizBank: bank }, resolve);
+                }
+            });
+        });
     }
 
     formatQuizText(quizData) {
@@ -1578,180 +1516,9 @@ class VUQuizGenie {
                     indicator.dispatchEvent(new Event('change', { bubbles: true }));
                 }
             });
-            this.showNotification('✅ Answers auto-selected', 'success');
+            vu_alerts.show('success', 'Correct answers selected');
         } else {
-            this.showNotification('No correct answers found', 'warning');
-        }
-    }
-
-    async downloadQuizPdf() {
-        try {
-            this.updateStatus('Preparing quiz solutions...');
-
-            // Get saved quizzes from storage
-            const result = await new Promise((resolve) => {
-                chrome.storage.local.get(['quizData'], resolve);
-            });
-
-            console.log('Retrieved quizData from storage:', result);
-
-            const savedQuizzes = result.quizData || [];
-
-            if (savedQuizzes.length === 0) {
-                this.showNotification('❌ No quiz data found in storage. Please solve some quizzes first.', 'error');
-
-                // Check if we're on finished page
-                if (window.location.href.includes('QuizFinished.aspx')) {
-                    this.showNotification('ℹ️ You are on quiz results page. Go to active quiz page to solve questions.', 'info');
-                }
-                return;
-            }
-
-            const groupedQuizzes = this.groupQuizzesByCourseAndStudent(savedQuizzes);
-
-            console.log('Grouped quizzes:', Object.keys(groupedQuizzes).length, 'groups');
-
-            if (Object.keys(groupedQuizzes).length === 0) {
-                this.showNotification('❌ No grouped data found', 'error');
-                return;
-            }
-
-            // Generate separate PDF for each group
-            let generatedCount = 0;
-            for (const [groupKey, groupInfo] of Object.entries(groupedQuizzes)) {
-                if (groupInfo.quizzes && groupInfo.quizzes.length > 0) {
-                    console.log(`Processing group ${groupKey} with ${groupInfo.quizzes.length} quizzes`);
-                    await this.generateGroupedPdf(groupInfo.quizzes, groupKey);
-                    generatedCount++;
-                }
-            }
-
-            if (generatedCount > 0) {
-                this.showNotification(`✅ ${generatedCount} quiz PDF(s) generated`, 'success');
-            } else {
-                this.showNotification('❌ PDF generation failed - no valid quiz data', 'error');
-            }
-
-        } catch (error) {
-            console.error('Error downloading PDF:', error);
-            this.showNotification(`❌ PDF Error: ${error.message}`, 'error');
-        } finally {
-            this.updateStatus('Ready');
-        }
-    }
-
-    groupQuizzesByCourseAndStudent(quizzes) {
-        const groups = {};
-
-        quizzes.forEach(quiz => {
-            // Create a unique group key based on course code, course name, and student ID
-            const groupKey = `${quiz.courseCode || 'Unknown'}_${quiz.courseName || 'Unknown'}_${quiz.studentId || 'Unknown'}`;
-
-            if (!groups[groupKey]) {
-                groups[groupKey] = {
-                    quizzes: [],
-                    courseCode: quiz.courseCode || 'Unknown',
-                    courseName: quiz.courseName || 'Unknown',
-                    studentId: quiz.studentId || 'Unknown',
-                    studentName: quiz.studentName || 'Unknown'
-                };
-            }
-
-            groups[groupKey].quizzes.push(quiz);
-        });
-
-        return groups;
-    }
-
-    async generateGroupedPdf(quizzes, groupKey) {
-        try {
-            // Get group info from the grouped quizzes object
-            const grouped = this.groupQuizzesByCourseAndStudent(quizzes);
-            const groupInfo = grouped[groupKey];
-
-            console.log('Generating PDF for group:', groupKey, "groupInfo", groupInfo, "quizzes", quizzes);
-
-            if (!groupInfo) {
-                // Fallback: create group info from first quiz
-                groupInfo = {
-                    quizzes: quizzes,
-                    courseCode: quizzes[0]?.courseCode || 'Unknown',
-                    courseName: quizzes[0]?.courseName || 'Unknown',
-                    studentId: quizzes[0]?.studentId || 'Unknown',
-                    studentName: quizzes[0]?.studentName || 'Unknown'
-                };
-            }
-
-            // Create filename with course code, student ID, and date
-            const filename = `VU_Quiz_${groupInfo.courseCode}_${groupInfo.studentId}_${Date.now()}.html`;
-
-            // Send data to background script
-            const response = await new Promise((resolve, reject) => {
-                chrome.runtime.sendMessage(
-                    {
-                        type: 'DOWNLOAD_GROUPED_PDF',
-                        data: {
-                            quizzes: groupInfo.quizzes || quizzes,
-                            groupInfo: groupInfo
-                        },
-                        filename: filename
-                    },
-                    (response) => {
-                        if (chrome.runtime.lastError) {
-                            reject(new Error(chrome.runtime.lastError.message));
-                        } else {
-                            resolve(response);
-                        }
-                    }
-                );
-            });
-
-            return response;
-
-        } catch (error) {
-            console.error('Error generating grouped PDF:', error);
-            throw error;
-        }
-    }
-
-    showNotification(message, type = 'info') {
-        const notification = document.createElement('div');
-        notification.textContent = message;
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
-            color: white;
-            padding: 12px 20px;
-            border-radius: 8px;
-            z-index: 10000;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            animation: slideIn 0.3s ease;
-        `;
-
-        document.body.appendChild(notification);
-
-        setTimeout(() => {
-            notification.style.animation = 'slideOut 0.3s ease';
-            setTimeout(() => notification.remove(), 300);
-        }, 3000);
-
-        // Add animation styles
-        if (!document.querySelector('#notification-styles')) {
-            const style = document.createElement('style');
-            style.id = 'notification-styles';
-            style.textContent = `
-                @keyframes slideIn {
-                    from { transform: translateX(100%); opacity: 0; }
-                    to { transform: translateX(0); opacity: 1; }
-                }
-                @keyframes slideOut {
-                    from { transform: translateX(0); opacity: 1; }
-                    to { transform: translateX(100%); opacity: 0; }
-                }
-            `;
-            document.head.appendChild(style);
+            vu_alerts.show('warning', 'No correct answers found', { bounce: true });
         }
     }
 }
@@ -1761,3 +1528,10 @@ if ((window.location.href.includes('/Quiz/') || window.location.href.includes('/
     && !window.vuQuizGenie) {
     window.vuQuizGenie = new VUQuizGenie();
 }
+
+// Initialize only if on a quiz question page (not finished)
+// if ((window.location.href.includes('/Quiz/') || window.location.href.includes('/FormativeAssessment/'))
+//     && !window.location.href.includes('QuizFinished.aspx')
+//     && !window.vuQuizGenie) {
+//     window.vuQuizGenie = new VUQuizGenie();
+// }

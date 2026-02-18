@@ -12,100 +12,70 @@ registerRoute("support", () => {
     </div>
 
     <div class="my-5">
-      <div class="mb-3">
-        <div class="card h-100">
-          <div class="card-body">
+      <div class="my-3">
+        <div class="card h-100 bg-transparent border-0">
+          <div class="card-body p-0">
             <h5 class="card-title fs-2">Documentation</h5>
             <p class="card-text text-muted">
               Comprehensive guides and tutorials to help you get the most out of VU Empire Genie.
             </p>
-            <button class="btn btn-outline-primary" onclick="window.open('https://vulms.vu.edu.pk', '_blank')">
+            <a class="btn btn-outline-primary" href="https://vu-empire-genie.vercel.app/docs" target="_blank">
               View Documentation
-            </button>
+            </a>
           </div>
         </div>
       </div>
       
-      <div class="mb-3">
-        <div class="card h-100">
-          <div class="card-body">
+      <div class="my-3">
+        <div class="card h-100 bg-transparent border-0">
+          <div class="card-body p-0">
             <h5 class="card-title fs-2">Community</h5>
             <p class="card-text text-muted">
-              Join our community of VU students to share tips, ask questions, and get help.
+              Join our whatsapp community of VU Empire Genie users to share tips, ask questions, and get help.
             </p>
-            <button class="btn btn-outline-info" onclick="window.open('https://vulms.vu.edu.pk', '_blank')">
+            <a class="btn btn-outline-info" href="https://chat.whatsapp.com/LOM1LuF7zrYEPEYeUR6hqL" target="_blank">
               Join Community
-            </button>
+            </a>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="my-5">
-      <div class="mb-3">
-        <div class="card h-100">
-          <div class="card-body">
-            <h5 class="card-title fs-2">Email Support</h5>
-            <p class="card-text text-muted">
-              Contact our support team directly for personalized assistance.
-            </p>
-            <button class="btn btn-outline-success" onclick="window.open('mailto:support@vuempire.com')">
-              Send Email
-            </button>
-          </div>
-        </div>
-      </div>
-      
-      <div class="mb-3">
-        <div class="card h-100">
-          <div class="card-body">
-            <h5 class="card-title fs-2">Emergency Help</h5>
-            <p class="card-text text-muted">
-              For urgent issues that need immediate attention.
-            </p>
-            <button class="btn btn-outline-danger" onclick="window.open('https://vulms.vu.edu.pk', '_blank')">
-              Get Emergency Help
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="mb-5">
-      <h4 class="fs-4">Common Issues</h4>
-      <div class="accordion" id="supportAccordion">
+    <div class="mt-2">
+      <h5 class="fs-2 mb-2">Common Issues</h5>
+      <div class="accordion border-0 rounded-0" id="supportAccordion">
         <div class="accordion-item">
           <h2 class="accordion-header">
-            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne">
+            <button class="accordion-button collapsed bg-transparent" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne">
               Extension not working
             </button>
           </h2>
           <div id="collapseOne" class="accordion-collapse collapse" data-bs-parent="#supportAccordion">
-            <div class="accordion-body text-muted">
+            <div class="accordion-body text-muted bg-transparent">
               Try refreshing the page, checking if the extension is enabled, or reinstalling the extension.
             </div>
           </div>
         </div>
         <div class="accordion-item">
           <h2 class="accordion-header">
-            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo">
+            <button class="accordion-button collapsed bg-transparent" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo">
               API key issues
             </button>
           </h2>
           <div id="collapseTwo" class="accordion-collapse collapse" data-bs-parent="#supportAccordion">
-            <div class="accordion-body text-muted">
+            <div class="accordion-body text-muted bg-transparent">
               Make sure you have a valid Google AI Studio API key and it's properly entered in the settings.
             </div>
           </div>
         </div>
         <div class="accordion-item">
           <h2 class="accordion-header">
-            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree">
+            <button class="accordion-button collapsed bg-transparent" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree">
               Performance issues
             </button>
           </h2>
           <div id="collapseThree" class="accordion-collapse collapse" data-bs-parent="#supportAccordion">
-            <div class="accordion-body text-muted">
+            <div class="accordion-body text-muted bg-transparent">
               Try disabling other extensions, clearing your browser cache, or restarting your browser.
             </div>
           </div>

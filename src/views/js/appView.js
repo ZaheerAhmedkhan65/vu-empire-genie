@@ -1,3 +1,4 @@
+//views/js/appView.js
 export const appView = document.querySelector("#app-view");
 setTimeout(() => {
     initializeStudentInfo();
@@ -23,7 +24,6 @@ async function loadStudentInfo() {
 }
 
 function displayStudentInfo(studentInfo) {
-    console.log('Displaying student info:', studentInfo);
     const profileImage = document.getElementById('student-profile-image');
     const studentId = document.getElementById('student-id');
     const studentName = document.getElementById('student-name');
