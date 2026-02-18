@@ -68,7 +68,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-
 async function handleDownloadQuizGroup(data, sendResponse) {
   try {
     const { quizzes, groupInfo } = data;

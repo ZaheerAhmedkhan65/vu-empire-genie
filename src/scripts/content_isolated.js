@@ -1,12 +1,69 @@
 // content_isolated.js - For quizzes
 console.log('VU Empire Genie - Quiz Mode');
 
+class AlertManager {
+    constructor(containerId = 'alertContainer', defaultDuration = 4000) {
+        this.container = document.getElementById(containerId);
+
+        if (!this.container) {
+            this.container = document.createElement('div');
+            this.container.id = containerId;
+            document.body.appendChild(this.container);
+        }
+
+        this.defaultDuration = defaultDuration;
+    }
+
+    show(type = 'info', message = '', options = {}) {
+        const alert = document.createElement('div');
+        alert.className = `alert-m ${type}`;
+        if (options.bounce) alert.style.animation = 'slideIn 0.5s forwards, bounce 0.5s 1';
+        alert.innerHTML = `
+            ${options.icon ? `<span class="icon">${options.icon}</span>` : ''}
+            <span class="message">${message}</span>
+            <span class="close-btn">&times;</span>
+        `;
+
+        // Close button
+        alert.querySelector('.close-btn').onclick = () => this.hide(alert);
+
+        // Append to container
+        this.container.appendChild(alert);
+
+        // Auto-dismiss
+        const duration = options.duration || this.defaultDuration;
+        const timeout = setTimeout(() => this.hide(alert), duration);
+
+        // Optional callbacks
+        if (options.onShow) options.onShow(alert);
+
+        // Store timeout to allow clearing if needed
+        alert._timeout = timeout;
+    }
+
+    hide(alert) {
+        if (alert._timeout) clearTimeout(alert._timeout);
+        alert.style.animation = 'slideOut 0.5s forwards';
+        setTimeout(() => alert.remove(), 500);
+    }
+
+    hideAll() {
+        const alerts = this.container.querySelectorAll('.alert-m');
+        alerts.forEach(alert => this.hide(alert));
+    }
+}
+
+const vu_alerts = new AlertManager();
+
 class VUQuizGenie {
     constructor() {
         this.pageType = 'quiz';
         this.isInitialized = false;
         this.chromeAvailable = false;
         this.apiKey = null;
+        this.cachedQuizData = null;          // Stores the last extracted quiz
+        this.cacheTimestamp = 0;              // Time of last extraction
+        this.cacheTTL = 5000;       // 5 seconds – re-extract if older
         this.settings = this.getDefaultSettings();
         this.init();
     }
@@ -39,10 +96,19 @@ class VUQuizGenie {
         // Wait for page to load
         await this.waitForPageReady();
 
+        window.addEventListener('popstate', () => {
+            // Invalidate cache so that next action re‑extracts
+            this.cachedQuizData = null;
+        });
+
         // Inject UI
         this.injectUI();
-        this.isInitialized = true;
 
+        // NEW: Pre‑extract quiz data and cache it
+        await this.extractAndCacheQuizData();
+        
+        this.isInitialized = true;
+        vu_alerts.show('success', 'VU Empire Genie initialized');
         // Check and run auto-solve if enabled
         await this.checkAndRunAutoSolve();
     }
@@ -188,256 +254,180 @@ class VUQuizGenie {
     injectUI() {
         if (document.getElementById('vu-genie-ui')) return;
 
-        const floatingBtnContainer = document.createElement("div");
-        floatingBtnContainer.classList.add("floating-btn-container");
-        const floatingBtn = document.createElement("button");
-        floatingBtn.innerHTML = 'vu'
-        floatingBtn.classList.add("floating-btn", "hide");
-        floatingBtnContainer.appendChild(floatingBtn);
-        document.body.appendChild(floatingBtnContainer);
-
         const container = document.createElement('div');
         container.id = 'vu-genie-ui';
         container.innerHTML = `
-            <div class="vu-genie-container">
-                <div class="vu-genie-content-wrapper">
-                    <div class="vu-genie-content" id="vu-genie-content">
-                        <button class="vu-btn primary" data-action="copy-quiz">
-                            Copy Quiz
-                        </button>
-
-                        <button class="vu-btn secondary" data-action="solve-with-ai">
-                            Solve Question
-                        </button>
-                    </div>
-                    <button class="vu-genie-close">×</button>
+        <div class="vu-genie-container">
+            <div class="vu-genie-content-wrapper">
+                <div class="vu-genie-content" id="vu-genie-content">
+                    <button class="vu-btn" id="vu-copy-quiz" data-action="copy-quiz">
+                        Copy Quiz
+                    </button>
+                    <button class="vu-btn primary" id="vu-solve-quiz" data-action="solve-with-ai">
+                        Solve Question
+                    </button>
                 </div>
-                <div class="vu-genie-status" id="vu-genie-status">Ready</div>
             </div>
-        `;
+        </div>
+    `;
 
-        // Add styles
-        this.injectStyles();
         document.body.appendChild(container);
         this.attachEventListeners();
     }
 
-    injectStyles() {
-        // Same styles as content_main.js
-        const style = document.createElement('style');
-        style.textContent = `
-            #vu-genie-ui {
-                min-width: 250px;
-                position: fixed;
-                bottom: 20px;
-                right: calc(50% - 175px);
-                z-index: 10000;
-                font-family: 'Segoe UI', Arial, sans-serif;
-            }
+    attachEventListeners() {
+        this.solveButton = document.getElementById('vu-solve-quiz');
+        this.copyButton = document.getElementById('vu-copy-quiz');
 
-            .vu-genie-container {
-                background: rgba(0, 64, 128, 0.95);
-                backdrop-filter: blur(10px);
-                border-radius: 12px;
-                padding: 10px 15px 5px;
-                min-width: 250px;
-                color: white;
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-                animation: slideUp 0.3s ease;
-                position: relative;
-            }
+        if (this.solveButton) {
+            this.solveButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.handleAction('solve-with-ai');
+            });
+        }
 
-            .floating-btn-container{
-                position: fixed;
-                bottom: 40px;
-                right: 40px;
-                text-align: end;
-            }
-
-            .floating-btn{
-                background-color: rgba(0, 64, 128, 0.95);
-                color: white;
-                font-size: 22px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding: 20px;
-                border-radius: 50%;
-                border: none;
-                outline: none;
-                text-transform: uppercase;
-                font-weight: bold;
-            }
-
-            .show{
-                display: block !important;
-            }
-
-            .hide{
-                display: none !important;
-            }
-
-            @keyframes slideUp {
-                from { transform: translateY(100px); opacity: 0; }
-                to { transform: translateY(0); opacity: 1; }
-            }
-
-            .vu-genie-close {
-                background: red;
-                border: none;
-                outline:none;
-                color: white;
-                font-size: 24px;
-                cursor: pointer;
-                padding: 0;
-                width: 24px;
-                height: 24px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border-radius: 50%;
-                position: absolute;
-                top: -8px;
-                right: -8px;
-            }
-
-            .vu-genie-close:hover {
-                background: rgba(255, 255, 255, 0.1);
-                color: black;
-            }
-
-            .vu-genie-content-wrapper {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-
-            .vu-genie-content {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 18px;
-            }
-
-            .vu-btn {
-                padding: 5px 10px;
-                border: none;
-                border-radius: 8px;
-                cursor: pointer;
-                font-weight: 600;
-                font-size: 14px;
-                transition: all 0.2s;
-            }
-
-            .vu-btn:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            }
-
-            .vu-btn.primary {
-                background: #10b981;
-                color: white;
-            }
-
-            .vu-genie-status {
-                margin-top: 10px;
-                padding-top: 5px;
-                border-top: 1px solid rgba(255, 255, 255, 0.1);
-                font-size: 12px;
-                opacity: 0.8;
-                text-align: center;
-            }
-            
-            .vu-btn.primary {
-                background: #10b981;
-                color: white;
-            }
-            
-            .vu-btn.secondary {
-                background: #8b5cf6;
-                color: white;
-            }
-        `;
-        document.head.appendChild(style);
+        if (this.copyButton) {
+            this.copyButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.handleAction('copy-quiz');
+            });
+        }
     }
 
-    attachEventListeners() {
-        const container = document.getElementById('vu-genie-ui');
-        const floatingBtn = document.querySelector(".floating-btn");
+    disableButton(button, text) {
+        if (!button) return;
+        button.disabled = true;
+        button.dataset.originalText = button.innerHTML;
+        button.innerHTML = text || 'Processing...';
+    }
 
-        // Close button
-        container.querySelector('.vu-genie-close').addEventListener('click', () => {
-            container.style.display = 'none';
-            floatingBtn.classList.remove('hide');
-            floatingBtn.classList.add('show');
-        });
+    enableButton(button) {
+        if (!button) return;
+        button.disabled = false;
+        button.innerHTML = button.dataset.originalText || 'Copy Quiz'; // fallback
+    }
 
-        floatingBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            container.style.display = 'block';
-            floatingBtn.classList.remove('show');
-            floatingBtn.classList.add('hide');
-        })
+    // For copy button, we want a temporary disable with a countdown (optional)
+    async disableCopyButtonTemporarily(duration = 3000) {
+        if (!this.copyButton) return;
+        const original = this.copyButton.innerText;
+        this.copyButton.disabled = true;
+        this.copyButton.innerText = 'Copied!';
+        await new Promise(resolve => setTimeout(resolve, duration));
+        this.copyButton.disabled = false;
+        this.copyButton.innerText = original;
+    }
 
-        // Action buttons
-        container.querySelectorAll('.vu-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const action = e.target.dataset.action;
-                this.handleAction(action);
-            });
-        });
+    async extractAndCacheQuizData() {
+        try {
+            const quizData = {
+                question: this.extractQuizQuestion(),
+                options: this.extractQuizOptionsWithIndices(),
+                courseCode: this.getCourseInfo().code,
+                courseName: this.getCourseInfo().name,
+                studentId: this.extractStudentInfo().studentId,
+                studentName: this.extractStudentInfo().studentName,
+                timestamp: new Date().toISOString(),
+                url: window.location.href
+            };
+
+            // Basic validation – if no question/options, don't cache
+            if (!quizData.question || quizData.options.length === 0) {
+                console.warn('Failed to extract valid quiz data');
+                return null;
+            }
+
+            this.cachedQuizData = quizData;
+            this.cacheTimestamp = Date.now();
+            this.saveRawQuizToStorage(quizData).catch(err =>
+                console.warn('Could not save raw quiz to storage:', err)
+            );
+
+            return quizData;
+        } catch (error) {
+            console.error('Error extracting quiz data:', error);
+            return null;
+        }
+    }
+
+    async ensureFreshCache() {
+        // If no cache, extract immediately
+        if (!this.cachedQuizData) {
+            return await this.extractAndCacheQuizData();
+        }
+
+        // Optional: detect if the question element changed
+        const currentQuestionText = this.extractQuizQuestion();
+        if (currentQuestionText !== this.cachedQuizData.question) {
+            // Question changed – update cache
+            return await this.extractAndCacheQuizData();
+        }
+
+        // If cache is still fresh (within TTL), return it
+        if (Date.now() - this.cacheTimestamp < this.cacheTTL) {
+            return this.cachedQuizData;
+        }
+
+        // Otherwise re‑extract
+        return await this.extractAndCacheQuizData();
     }
 
     async handleAction(action) {
-        this.updateStatus('Processing...');
+        // Determine which button triggered the action
+        let button = null;
+        if (action === 'solve-with-ai') button = this.solveButton;
+        else if (action === 'copy-quiz') button = this.copyButton;
 
-        switch (action) {
-            case 'solve-with-ai':
-                await this.solveWithAI();
-                break;
-            case 'copy-quiz':
-                await this.copyQuiz();
-                break;
-            case 'open-options':
-                if (this.chromeAvailable) {
-                    chrome.runtime.sendMessage({ type: 'OPEN_OPTIONS' });
-                }
-                break;
-        }
+        // Prevent double-clicking
+        if (button && button.disabled) return;
 
-        this.updateStatus('Ready');
-    }
-
-    updateStatus(message) {
-        const statusElement = document.getElementById('vu-genie-status');
-        if (statusElement) {
-            statusElement.textContent = message;
+        try {
+            switch (action) {
+                case 'solve-with-ai':
+                    this.disableButton(button, 'Solving...');
+                    await this.solveWithAI();
+                    break;
+                case 'copy-quiz':
+                    // For copy, we disable and re-enable after a fixed time
+                    this.disableButton(button, 'Copying...');
+                    // Perform copy (it's fast, but we'll still await it)
+                    await this.copyQuiz(button);
+                    break;
+                case 'open-options':
+                    if (this.chromeAvailable) {
+                        chrome.runtime.sendMessage({ type: 'OPEN_OPTIONS' });
+                    }
+                    break;
+            }
+        } catch (error) {
+            console.error(`Error in ${action}:`, error);
+            // Re-enable button immediately on error
+            if (button) this.enableButton(button);
+        } finally {
+            // For solve-with-ai, we re-enable after completion (even if error)
+            if (action === 'solve-with-ai' && button) {
+                this.enableButton(button);
+            }
+            // For copy, we already have a timeout; do nothing else
         }
     }
 
     async solveWithAI() {
         try {
-            this.updateStatus('Extracting quiz...');
             // Extract quiz data
-            const quizData = await this.extractQuizForAI();
-
+            const quizData = await this.ensureFreshCache();
+            console.log('Extracted quiz data:', quizData);
             if (!quizData || !quizData.question || quizData.options.length === 0) {
-                this.showNotification('❌ Could not extract quiz question', 'error');
+                vu_alerts.show('error', 'Could not extract quiz question', { bounce: true });
                 return;
             }
 
-            // Get API key via message to background script
-            this.updateStatus('Getting API key...');
-            // const apiKey = await this.getApiKeyFromBackground();
-
             if (!this.apiKey) {
-                this.showNotification('Please set your Gemini API key in extension settings', 'error');
+                vu_alerts.show('success','Please set your Gemini API key in extension settings', { bounce: true });
                 // Open options page
                 chrome.runtime.sendMessage({ type: 'OPEN_OPTIONS' });
                 return;
             }
-
-            this.updateStatus('Solving with Gemini AI...');
 
             // Get AI response
             const aiResponse = await this.getGeminiQuizResponse(quizData, this.apiKey);
@@ -447,9 +437,7 @@ class VUQuizGenie {
 
         } catch (error) {
             console.error('Error in solveWithAI:', error);
-            this.showNotification(`❌ AI Error: ${error.message}`, 'error');
-        } finally {
-            this.updateStatus('Ready');
+            vu_alerts.show('error', 'Failed to solve with AI', { bounce: true });
         }
     }
 
@@ -750,6 +738,9 @@ class VUQuizGenie {
                 // Wait a bit for the next question to load
                 await new Promise(resolve => setTimeout(resolve, 3000));
 
+                // NEW: re‑extract cache for the new question
+                await this.extractAndCacheQuizData();
+
                 // Check if we're still on a quiz page (not finished)
                 if (window.location.href.includes('/Quiz/') &&
                     !window.location.href.includes('QuizFinished.aspx')) {
@@ -859,6 +850,8 @@ class VUQuizGenie {
             if (this.settings.autoSelect) {
                 await this.autoSelectQuizAnswers(solution.correctAnswers, quizData.options);
             }
+
+            await this.updateRawQuizWithSolution(quizData, solution);
 
             // Save quiz data for future reference
             if (this.settings.autoSaveQuiz) {
@@ -1036,27 +1029,12 @@ class VUQuizGenie {
         const popup = document.createElement('div');
         const container = document.querySelector(".vu-genie-container");
         popup.id = 'vu-genie-quiz-solution';
-        popup.style.cssText = `
-        position: absolute;
-        bottom: 100%;
-        left: 0;
-        color: #333;
-        background: rgba(66, 153, 225, 0.2);
-        padding: 5px;
-        border-radius: 15px;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        z-index: 10001;
-        width: 100%;
-        font-family: 'Segoe UI', Arial, sans-serif;
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255,255,255,0.2);
-    `;
 
         let solutionHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; padding: 0 10px;">
     `;
 
-        // ✅ Correct Answer Section
+        //  Correct Answer Section
         if (solution.correctAnswers.length > 0) {
             solutionHTML += `
             <div style="padding: 0 5px 0 0">
@@ -1071,13 +1049,13 @@ class VUQuizGenie {
         }
 
         solutionHTML += `
-            <button id="close-solution" style="background: rgba(255,255,255,0.5); border: none; font-size: 20px; cursor: pointer; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+            <button id="close-solution" style="background: rgba(255,255,255,0.5); border: none; font-size: 20px; cursor: pointer; width: 30px; height: 25px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
                 ×
             </button>
         </div>
         `;
 
-        // ✅ Explanation Section
+        //  Explanation Section
         if (solution.explanation) {
             solutionHTML += `
             <div style="padding:0 10px 5px;">
@@ -1139,15 +1117,15 @@ class VUQuizGenie {
             }
 
             if (selectedCount > 0) {
-                this.showNotification(`✅ ${selectedCount} answer${selectedCount > 1 ? 's' : ''} selected`, 'success');
+                vu_alerts.show('success', `${selectedCount} answer${selectedCount > 1 ? 's' : ''} selected`);
             } else {
                 console.warn('Could not auto-select any answers');
-                this.showNotification('⚠️ Could not auto-select. Please select manually.', 'warning');
+                vu_alerts.show('warning', 'Could not auto-select. Please select manually.', { bounce: true });
             }
 
         } catch (error) {
             console.error('Error auto-selecting:', error);
-            this.showNotification('❌ Auto-select failed', 'error');
+            vu_alerts.show('error', 'Error auto-selecting answers', { bounce: true });
         }
     }
 
@@ -1410,18 +1388,26 @@ class VUQuizGenie {
         }
     }
 
-    async copyQuiz() {
-        const quizData = this.extractFullQuiz();
+    async copyQuiz(button) {
+        const quizData = await this.ensureFreshCache();
+        if (!quizData || !quizData.question || quizData.options.length === 0) {
+            vu_alerts.show('error', 'Could not extract quiz question', { bounce: true });
+            // Wait 3 seconds before re-enablingz
+            this.enableButton(button)
+            return;
+        }
         const text = this.formatQuizText(quizData);
 
         await navigator.clipboard.writeText(text);
-        this.showNotification('Quiz question copied to clipboard', 'success');
+        // Wait 0.5 seconds before re-enablingz
+        setTimeout(() => this.enableButton(button), 500);
+        vu_alerts.show('success', 'Quiz copied to clipboard');
     }
 
     extractFullQuiz() {
         const question = this.extractQuizQuestion();
-        const options = this.extractQuizOptions();
-
+        const options = this.extractQuizOptionsWithIndices(); 
+        console.log('Extracted options:', options);
         return {
             question,
             options,
@@ -1451,18 +1437,58 @@ class VUQuizGenie {
         }
     }
 
-    extractQuizOptions() {
-        const options = [];
-        const optionElements = document.querySelectorAll('table table table td > div span[id^="lblExpression"]');
+    generateQuizId(quizData) {
+        const base = `${quizData.studentId}|${quizData.courseCode}|${quizData.question.replace(/\s+/g, ' ').trim()}`;
+        let hash = 0;
+        for (let i = 0; i < base.length; i++) {
+            hash = ((hash << 5) - hash) + base.charCodeAt(i);
+            hash |= 0; // convert to 32-bit integer
+        }
+        return `quiz_${Math.abs(hash)}`;
+    }
 
-        optionElements.forEach((el, index) => {
-            options.push({
-                letter: String.fromCharCode(65 + index),
-                text: el.textContent.trim()
+    async saveRawQuizToStorage(quizData) {
+        const id = this.generateQuizId(quizData);
+        const record = {
+            ...quizData,
+            id,
+            solved: false,
+            solution: null,
+            savedAt: new Date().toISOString()
+        };
+        return new Promise((resolve) => {
+            chrome.storage.local.get(['vuQuizBank'], (result) => {
+                const bank = result.vuQuizBank || {};
+                bank[id] = record;
+                chrome.storage.local.set({ vuQuizBank: bank }, resolve);
             });
         });
+    }
 
-        return options;
+    async updateRawQuizWithSolution(quizData, solution) {
+        const id = this.generateQuizId(quizData);
+        return new Promise((resolve) => {
+            chrome.storage.local.get(['vuQuizBank'], (result) => {
+                const bank = result.vuQuizBank || {};
+                if (bank[id]) {
+                    bank[id].solved = true;
+                    bank[id].solution = solution;
+                    bank[id].updatedAt = new Date().toISOString();
+                    chrome.storage.local.set({ vuQuizBank: bank }, resolve);
+                } else {
+                    // If not found (shouldn't happen), create a new solved entry
+                    const record = {
+                        ...quizData,
+                        id,
+                        solved: true,
+                        solution,
+                        savedAt: new Date().toISOString()
+                    };
+                    bank[id] = record;
+                    chrome.storage.local.set({ vuQuizBank: bank }, resolve);
+                }
+            });
+        });
     }
 
     formatQuizText(quizData) {
@@ -1490,50 +1516,9 @@ class VUQuizGenie {
                     indicator.dispatchEvent(new Event('change', { bubbles: true }));
                 }
             });
-            this.showNotification('✅ Answers auto-selected', 'success');
+            vu_alerts.show('success', 'Correct answers selected');
         } else {
-            this.showNotification('No correct answers found', 'warning');
-        }
-    }
-
-    showNotification(message, type = 'info') {
-        const notification = document.createElement('div');
-        notification.textContent = message;
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
-            color: white;
-            padding: 12px 20px;
-            border-radius: 8px;
-            z-index: 10000;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            animation: slideIn 0.3s ease;
-        `;
-
-        document.body.appendChild(notification);
-
-        setTimeout(() => {
-            notification.style.animation = 'slideOut 0.3s ease';
-            setTimeout(() => notification.remove(), 300);
-        }, 3000);
-
-        // Add animation styles
-        if (!document.querySelector('#notification-styles')) {
-            const style = document.createElement('style');
-            style.id = 'notification-styles';
-            style.textContent = `
-                @keyframes slideIn {
-                    from { transform: translateX(100%); opacity: 0; }
-                    to { transform: translateX(0); opacity: 1; }
-                }
-                @keyframes slideOut {
-                    from { transform: translateX(0); opacity: 1; }
-                    to { transform: translateX(100%); opacity: 0; }
-                }
-            `;
-            document.head.appendChild(style);
+            vu_alerts.show('warning', 'No correct answers found', { bounce: true });
         }
     }
 }
@@ -1543,3 +1528,10 @@ if ((window.location.href.includes('/Quiz/') || window.location.href.includes('/
     && !window.vuQuizGenie) {
     window.vuQuizGenie = new VUQuizGenie();
 }
+
+// Initialize only if on a quiz question page (not finished)
+// if ((window.location.href.includes('/Quiz/') || window.location.href.includes('/FormativeAssessment/'))
+//     && !window.location.href.includes('QuizFinished.aspx')
+//     && !window.vuQuizGenie) {
+//     window.vuQuizGenie = new VUQuizGenie();
+// }
