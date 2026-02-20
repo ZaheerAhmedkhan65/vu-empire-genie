@@ -68,8 +68,8 @@
       ],
       "js": [
         "scripts/content_student_info.js"
-        ],
-        "run_at": "document_end"
+      ],
+      "run_at": "document_end"
     },
     {
       "matches": [
@@ -83,6 +83,16 @@
       "run_at": "document_end",
       "world": "ISOLATED",
       "all_frames": true
+    },
+    {
+      "matches": [
+        "https://vulms.vu.edu.pk/",
+        "https://vulms.vu.edu.pk/LMS_LP.aspx*"
+      ],
+      "js": [
+        "scripts/content_login.js"
+      ],
+      "run_at": "document_end"
     }
   ],
   "background": {

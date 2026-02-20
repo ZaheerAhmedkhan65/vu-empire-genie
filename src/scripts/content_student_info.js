@@ -13,7 +13,21 @@ async function extractAndSendStudentInfo() {
 
     if (currentInfo && (currentInfo.name || currentInfo.studentId)) {
       // Merge existing and current data intelligently
-      const mergedInfo = mergeStudentInfo(existingInfo, currentInfo);
+      let mergedInfo;
+
+      // Check if student identity has changed
+      const storedStudentId = existingInfo.studentId;
+      const currentStudentId = currentInfo.studentId;
+
+      if (storedStudentId && currentStudentId && storedStudentId !== currentStudentId) {
+        // Different student: start fresh with current info
+        mergedInfo = { ...currentInfo };
+        // Optionally clear other user‑specific data (e.g., quizData) here
+        // await chrome.storage.local.remove('quizData');
+      } else {
+        // Same student or no stored ID: merge, giving priority to current data
+        mergedInfo = mergeStudentInfo(existingInfo, currentInfo);
+      }
 
       // Send to background script
       chrome.runtime.sendMessage({
