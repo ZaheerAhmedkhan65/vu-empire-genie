@@ -28,6 +28,7 @@ body::-webkit-scrollbar {
 }
 
 .main {
+    height: 76vh;
     overflow-y: auto;
     overflow-x: hidden;
 }

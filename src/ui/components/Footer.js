@@ -1,7 +1,7 @@
 // ui/components/Footer.js
 const Footer = () => {
     const footer = document.createElement('footer');
-    footer.className = 'my-5 bg-primary-subtle pb-5';
+    footer.className = 'mt-5 bg-primary-subtle pb-3';
     footer.id = 'app-footer'; // Add an ID for easy detection
     footer.innerHTML = `
         <ul class="navbar d-flex py-2 container">

@@ -1,4 +1,4 @@
-// ISOLATED world – can use chrome.runtime
+// scripts/content_lecture_isolated.js
 window.addEventListener('vu-genie-settings-update', (event) => {
     const { settings } = event.detail;
     // Send to background to save to chrome.storage and broadcast
