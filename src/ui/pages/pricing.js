@@ -34,7 +34,7 @@ registerRoute("pricing", () => {
         </div>
       </div>
       
-      <div class="col-md-6 mb-3 pricing-card pro py-3 text-dark">
+      <div class="col-md-6 mb-3 pricing-card pro py-3 position-relative text-dark">
         <div class="card h-100 border-0 bg-transparent">
           <div class="card-body text-center">
             <h2 class="card-title fs-2">Pro</h2>

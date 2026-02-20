@@ -3,17 +3,39 @@ const Joi = require('joi');
 const feedbackValidation = {
     // Create feedback validation
     createFeedback: Joi.object({
+        user_id: Joi.string()
+            .required()
+            .messages({
+                'any.required': 'User ID is required',
+                'string.base': 'User ID must be a string'
+            }),
+
         feedback_type: Joi.string()
-            .valid('feature', 'bug', 'suggestion', 'compliment', 'other')
+            .valid('feature', 'bug', 'suggestion', 'compliment', 'rating', 'other')
             .required()
             .messages({
                 'any.required': 'Feedback type is required',
-                'any.only': 'Feedback type must be one of: feature, bug, suggestion, compliment, other'
+                'any.only': 'Feedback type must be one of: feature, bug, suggestion, compliment, rating, other'
+            }),
+            
+        rating: Joi.number()
+            .min(1)
+            .max(5)
+            .when('feedback_type', {
+                is: 'rating',
+                then: Joi.required(),
+                otherwise: Joi.optional()
+            })
+            .messages({
+                'number.base': 'Rating must be a number',
+                'number.min': 'Rating must be at least 1',
+                'number.max': 'Rating cannot be more than 5',
+                'any.required': 'Rating is required when feedback type is "rating"'
             }),
 
         message: Joi.string()
             .min(5)
-            .required()
+            .optional()
             .messages({
                 'any.required': 'Message is required',
                 'string.min': 'Message must be at least 5 characters long'
@@ -26,19 +48,6 @@ const feedbackValidation = {
             .max(255)
             .messages({
                 'string.email': 'Please provide a valid email address'
-            }),
-
-        rating: Joi.number()
-            .integer()
-            .min(1)
-            .max(5)
-            .optional()
-            .allow(null)
-            .messages({
-                'number.base': 'Rating must be a number',
-                'number.integer': 'Rating must be an integer',
-                'number.min': 'Rating must be at least 1',
-                'number.max': 'Rating cannot be more than 5'
             })
     })
 };

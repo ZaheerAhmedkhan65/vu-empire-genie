@@ -4,8 +4,10 @@ const cors = require('cors');
 const morgan = require("morgan");
 const cookieParser = require('cookie-parser');
 const methodOverride = require("method-override");
+const expressLayouts = require("express-ejs-layouts");
 const quizRoutes = require('../routes/quiz.route');
 const authRoutes = require('../routes/auth.route');
+const pageRoutes = require('../routes/page.route');
 const feedbackRoutes = require('../routes/feedback.route');
 const multer = require('multer');
 const path = require('path');
@@ -14,9 +16,31 @@ const app = express();
 
 require("dotenv").config();
 
+app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    next();
+});
+
+app.use((req, res, next) => {
+    if (req.path.startsWith('/api/')) {
+        res.setHeader('Content-Type', 'application/json');
+    }
+    next();
+});
+
+app.use((req, res, next) => {
+    res.locals.header = true; // Show header by default
+    res.locals.footer = true; // Show footer by default
+    res.locals.layout = "layouts/application";
+    next();
+});
+
 // Set EJS as the view engine
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../views'));
+app.use(expressLayouts);
 
 // Middleware
 app.use(cors());
@@ -117,6 +141,7 @@ app.use((err, req, res, next) => {
     next(err);
 });
 
+app.use('/', pageRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/quiz', quizRoutes);
 app.use('/api/feedback', feedbackRoutes);

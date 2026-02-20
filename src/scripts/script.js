@@ -1,6 +1,7 @@
 // script.js
 import settingsManager from './settings_manager.js';
-
+(function () {
+    'use strict';
 document.addEventListener('DOMContentLoaded', async () => {
     // Initialize settings manager
     await settingsManager.initialize();
@@ -183,32 +184,6 @@ async function executeOnTab(tabId, action) {
     }
 }
 
-async function initSettings() {
-    try {
-        // Get current settings
-        const settings = settingsManager.getAll();
-
-        // Set form values
-        document.getElementById('apiKey').value = settings.apiKey || '';
-        document.getElementById('autoSelect').checked = settings.autoSelect !== false;
-        document.getElementById('enableCopyPaste').checked = settings.enableCopyPaste !== false;
-        document.getElementById('autoSkipAllLectures').checked = settings.autoSkipAllLectures !== false;
-        document.getElementById('showSolution').checked = settings.showSolution !== false;
-        document.getElementById('autoSolve').checked = settings.autoSolve === true;
-        document.getElementById('autoSaveAfterSolve').checked = settings.autoSaveAfterSolve === true;
-
-        // Add listener for settings changes
-        settingsManager.addListener(updateSettingsUI);
-
-        // Save settings button
-        document.getElementById('saveBtn').addEventListener('click', saveSettings);
-
-    } catch (error) {
-        console.error('Error loading settings:', error);
-        alerts.show('error', 'Error loading settings: ' + error.message);
-    }
-}
-
 function updateSettingsUI(settings) {
 
     // Update form values without triggering change events
@@ -271,3 +246,4 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     sendResponse({ received: true });
 });
+}) ();
