@@ -24,11 +24,11 @@ body::-webkit-scrollbar {
 }
 
 #app-view .app-container {
-    min-height: 57vh;
+    min-height: 59vh;
 }
 
 .main {
-    height: 76vh;
+    height: 80vh;
     overflow-y: auto;
     overflow-x: hidden;
 }
@@ -89,16 +89,15 @@ body::-webkit-scrollbar {
 
 .pro {
     background-color: #f8f9fa;
-    border: 5px solid #712cf9;
+    border: 3px solid #712cf9;
 }
 
 .pro::before{
     content: "Most Popular";
-    width: 30px;
+    width: 83px;
     height: 18px;
-    transform: rotate(45deg);
-    position: relative;
-    top: -22px;
+    position: absolute;
+    top: -13px;
     left: 40px;
     background-color: #702cf9;
     color: white;
