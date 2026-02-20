@@ -1,32 +1,44 @@
 const FeedbackService = require('../services/feedback.service');
 
 class FeedbackController {
-    static async submitFeedback(req, res) {
-        try {
-            const user_id = req.user?.id || null; // if user is logged in
-            const { feedback_type, message, contact_email, rating } = req.body;
 
-            const feedback_id = await FeedbackService.submitFeedback({
+    static async submit(req, res) {
+        try {
+            const {
                 user_id,
+                rating,
                 feedback_type,
                 message,
-                contact_email,
-                rating
+                contact_email
+            } = req.body;
+            console.log('Submitting feedback for user_id:', user_id);
+            const feedback_id = await FeedbackService.submitFeedback({
+                user_id,
+                rating: Number(rating),
+                feedback_type,
+                message,
+                contact_email
             });
 
-            res.status(201).json({ message: 'Feedback submitted successfully', feedback_id });
+            res.status(200).json({
+                success: true,
+                message: 'Feedback saved successfully',
+                feedback_id
+            });
+
         } catch (err) {
-            console.error(err);
-            res.status(500).json({ message: 'Server error' });
+            res.status(400).json({
+                success: false,
+                message: err.message
+            });
         }
     }
 
-    static async listFeedback(req, res) {
+    static async list(req, res) {
         try {
             const feedbacks = await FeedbackService.listFeedbacks();
             res.json(feedbacks);
         } catch (err) {
-            console.error(err);
             res.status(500).json({ message: 'Server error' });
         }
     }

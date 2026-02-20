@@ -14,15 +14,12 @@ let currentRoute = 'home';  // default
 const updateActiveClass = (route) => {
     // Use provided route, otherwise fall back to tracked currentRoute
     const targetRoute = route || currentRoute;
-    console.log("Updating active class for route:", targetRoute);
 
     const navButtons = document.querySelectorAll('[data-route]');
-    console.log("Found nav buttons:", navButtons);
     navButtons.forEach(btn => {
         btn.classList.remove('active');
         if (btn.dataset.route === targetRoute) {
             btn.classList.add('active');
-            console.log("Added active class to button:", btn);
         }
     });
 };

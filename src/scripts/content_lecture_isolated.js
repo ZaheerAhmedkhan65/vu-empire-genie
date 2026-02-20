@@ -1,4 +1,5 @@
 // scripts/content_lecture_isolated.js
+(function() {
 window.addEventListener('vu-genie-settings-update', (event) => {
     const { settings } = event.detail;
     // Send to background to save to chrome.storage and broadcast
@@ -7,3 +8,4 @@ window.addEventListener('vu-genie-settings-update', (event) => {
         settings
     }).catch(err => console.warn('Failed to send settings update:', err));
 });
+}) ();

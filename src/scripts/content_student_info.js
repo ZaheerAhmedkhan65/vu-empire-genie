@@ -1,5 +1,7 @@
 // scripts/content_student_info.js
 // Content script for extracting student information from VU LMS pages
+(function () {
+  'use strict';
 
 // Function to extract and send student info
 async function extractAndSendStudentInfo() {
@@ -569,3 +571,4 @@ class StudentInfoExtractor {
     this.cache.set(key, { data, timestamp: Date.now() });
   }
 }
+})();

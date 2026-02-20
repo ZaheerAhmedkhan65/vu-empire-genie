@@ -1,19 +1,22 @@
 const Feedback = require('../models/Feedback');
 
 class FeedbackService {
+
     static async submitFeedback(data) {
-        // Call the model
-        const feedback_id = await Feedback.create(data);
-        return feedback_id;
+        console.log('FeedbackService.submitFeedback called with data:', data);
+        if (!data.user_id) {
+            throw new Error('User ID is required');
+        }
+
+        return await Feedback.upsert(data);
     }
 
     static async listFeedbacks() {
-        const feedbacks = await Feedback.getAll();
-        return feedbacks;
+        return await Feedback.getAll();
     }
 
-    static async getFeedback(feedback_id) {
-        return await Feedback.getById(feedback_id);
+    static async getUserFeedback(user_id) {
+        return await Feedback.getByUserId(user_id);
     }
 }
 

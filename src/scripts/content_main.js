@@ -1,6 +1,7 @@
 // scripts/content_main.js
 console.log('VU Empire Genie - Lecture Mode');
-
+(function () {
+    'use strict';
 class AlertManager {
     constructor(containerId = 'alertContainer', defaultDuration = 4000) {
         this.container = document.getElementById(containerId);
@@ -640,3 +641,4 @@ class VULectureGenie {
 if (window.location.href.includes('LessonViewer.aspx') && !window.vuLectureGenie) {
     window.vuLectureGenie = new VULectureGenie();
 }
+}) ();

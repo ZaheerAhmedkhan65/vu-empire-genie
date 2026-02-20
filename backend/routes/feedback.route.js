@@ -7,11 +7,11 @@ const { createFeedback, validate } = require('../validations/feedback.validation
 router.post(
     '/',
     validate(createFeedback),
-    FeedbackController.submitFeedback
+    FeedbackController.submit
 );
 
 // List all feedbacks
-router.get('/', FeedbackController.listFeedback);
+router.get('/', FeedbackController.list);
 
 // Get a single feedback by ID
 router.get('/:id', FeedbackController.getFeedbackById);
