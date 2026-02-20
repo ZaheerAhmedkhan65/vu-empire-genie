@@ -71,7 +71,6 @@ class VUQuizGenie {
     getDefaultSettings() {
         return {
             autoSelect: true,
-            autoSaveQuiz: true,
             showSolution: true,
             autoSolve: false,
             autoSaveAfterSolve: false,
@@ -176,7 +175,6 @@ class VUQuizGenie {
                     const saved = localStorage.getItem('vuGenie_settings');
                     resolve(saved ? JSON.parse(saved) : {
                         autoSelect: true,
-                        autoSaveQuiz: true,
                         showSolution: false,
                         autoSolve: false,
                         autoSaveAfterSolve: false
@@ -189,7 +187,6 @@ class VUQuizGenie {
                     const saved = localStorage.getItem('vuGenie_settings');
                     resolve(saved ? JSON.parse(saved) : {
                         autoSelect: true,
-                        autoSaveQuiz: true,
                         showSolution: false,
                         autoSolve: false,
                         autoSaveAfterSolve: false
@@ -205,7 +202,6 @@ class VUQuizGenie {
                             const saved = localStorage.getItem('vuGenie_settings');
                             resolve(saved ? JSON.parse(saved) : {
                                 autoSelect: true,
-                                autoSaveQuiz: true,
                                 showSolution: false,
                                 autoSolve: false,
                                 autoSaveAfterSolve: false
@@ -215,7 +211,6 @@ class VUQuizGenie {
                             const settings = response || {};
                             resolve({
                                 autoSelect: settings.autoSelect !== false,
-                                autoSaveQuiz: settings.autoSaveQuiz !== false,
                                 showSolution: settings.showSolution !== false,
                                 autoSolve: settings.autoSolve === true,
                                 autoSaveAfterSolve: settings.autoSaveAfterSolve === true,
@@ -230,7 +225,6 @@ class VUQuizGenie {
                 const saved = localStorage.getItem('vuGenie_settings');
                 resolve(saved ? JSON.parse(saved) : {
                     autoSelect: true,
-                    autoSaveQuiz: true,
                     showSolution: false,
                     autoSolve: false,
                     autoSaveAfterSolve: false
@@ -831,6 +825,22 @@ class VUQuizGenie {
         }
     }
 
+    onSettingsUpdated(settings) {
+        const oldAutoSolve = this.settings.autoSolve;
+        this.settings = {
+            ...this.getDefaultSettings(),
+            ...settings
+        };
+        this.saveSettingsToLocalStorage();
+
+        // If autoSolve was just enabled and we're on a quiz page (not finished), run it
+        if (this.settings.autoSolve && !oldAutoSolve && this.apiKey) {
+            // if (!window.location.href.includes('QuizFinished.aspx')) {
+                this.solveWithAI();
+            // }
+        }
+    }
+
     async applyQuizSolution(quizData, aiResponse) {
         try {
             // Parse the AI response
@@ -853,9 +863,7 @@ class VUQuizGenie {
             await this.updateRawQuizWithSolution(quizData, solution);
 
             // Save quiz data for future reference
-            if (this.settings.autoSaveQuiz) {
-                await this.saveQuizData(quizData, solution);
-            }
+            await this.saveQuizData(quizData, solution);
 
             // Auto-save and move to next question if enabled
             if (this.settings.autoSaveAfterSolve) {
@@ -1527,7 +1535,7 @@ class VUQuizGenie {
 }
 
 // Initialize only if on quiz page
-if ((window.location.href.includes('/Quiz/') || window.location.href.includes('/FormativeAssessment/'))
+if ((window.location.href.includes('/Quiz/') || window.location.href.includes('/FormativeAssessment/') && !window.vuQuizGenie)
     && !window.vuQuizGenie) {
     window.vuQuizGenie = new VUQuizGenie();
 }

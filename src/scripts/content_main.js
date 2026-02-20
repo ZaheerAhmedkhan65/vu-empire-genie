@@ -73,8 +73,7 @@ class VULectureGenie {
                 const settings = JSON.parse(savedSettings);
                 return {
                     autoSkipLecture: settings.autoSkipAllLectures || false,
-                    autoSelect: settings.autoSelect !== false,
-                    autoSaveQuiz: settings.autoSaveQuiz !== false
+                    autoSelect: settings.autoSelect !== false
                 };
             }
         } catch (error) {
@@ -83,8 +82,7 @@ class VULectureGenie {
 
         return {
             autoSkipLecture: false,
-            autoSelect: true,
-            autoSaveQuiz: true
+            autoSelect: true
         };
     }
 
@@ -617,8 +615,7 @@ class VULectureGenie {
         this.settings = {
             ...this.settings,
             autoSkipLecture: settings.autoSkipAllLectures || false,
-            autoSelect: settings.autoSelect !== false,
-            autoSaveQuiz: settings.autoSaveQuiz !== false
+            autoSelect: settings.autoSelect !== false
         };
 
         // Update UI button text and skip button state

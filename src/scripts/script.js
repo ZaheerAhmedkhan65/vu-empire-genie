@@ -64,7 +64,6 @@ async function initSettingsUI() {
         // Set form values from settings
         document.getElementById('apiKey').value = settings.apiKey || '';
         document.getElementById('autoSelect').checked = settings.autoSelect !== false;
-        document.getElementById('autoSaveQuiz').checked = settings.autoSaveQuiz !== false;
         document.getElementById('enableCopyPaste').checked = settings.enableCopyPaste !== false;
         document.getElementById('autoSkipAllLectures').checked = settings.autoSkipAllLectures !== false;
         document.getElementById('showSolution').checked = settings.showSolution !== false;
@@ -192,7 +191,6 @@ async function initSettings() {
         // Set form values
         document.getElementById('apiKey').value = settings.apiKey || '';
         document.getElementById('autoSelect').checked = settings.autoSelect !== false;
-        document.getElementById('autoSaveQuiz').checked = settings.autoSaveQuiz !== false;
         document.getElementById('enableCopyPaste').checked = settings.enableCopyPaste !== false;
         document.getElementById('autoSkipAllLectures').checked = settings.autoSkipAllLectures !== false;
         document.getElementById('showSolution').checked = settings.showSolution !== false;
@@ -216,7 +214,6 @@ function updateSettingsUI(settings) {
     // Update form values without triggering change events
     document.getElementById('apiKey').value = settings.apiKey || '';
     document.getElementById('autoSelect').checked = settings.autoSelect !== false;
-    document.getElementById('autoSaveQuiz').checked = settings.autoSaveQuiz !== false;
     document.getElementById('enableCopyPaste').checked = settings.enableCopyPaste !== false;
     document.getElementById('autoSkipAllLectures').checked = settings.autoSkipAllLectures !== false;
     document.getElementById('showSolution').checked = settings.showSolution !== false;
@@ -230,7 +227,6 @@ async function saveSettings() {
         const newSettings = {
             apiKey: document.getElementById('apiKey').value.trim(),
             autoSelect: document.getElementById('autoSelect').checked,
-            autoSaveQuiz: document.getElementById('autoSaveQuiz').checked,
             enableCopyPaste: document.getElementById('enableCopyPaste').checked,
             autoSkipAllLectures: document.getElementById('autoSkipAllLectures').checked,
             showSolution: document.getElementById('showSolution').checked,
