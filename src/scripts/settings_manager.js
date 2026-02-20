@@ -13,7 +13,6 @@ class SettingsManager {
 
             // Core Features
             autoSelect: true,
-            autoSaveQuiz: true,
             enableCopyPaste: true,
             autoSkipAllLectures: false,
 

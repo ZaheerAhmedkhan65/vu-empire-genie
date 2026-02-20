@@ -3,6 +3,7 @@ import { registerRoute } from "../core/router.js";
 
 registerRoute("faq", () => {
     const container = document.createElement('div');
+    container.classList.add('container','app-container');
     container.innerHTML = `
     <div class="fs-1 mb-3">Frequently Asked Questions</div>
     
