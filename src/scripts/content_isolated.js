@@ -1,6 +1,7 @@
 // content_isolated.js - For quizzes
 console.log('VU Empire Genie - Quiz Mode');
-
+(function () {
+    'use strict';
 class AlertManager {
     constructor(containerId = 'alertContainer', defaultDuration = 4000) {
         this.container = document.getElementById(containerId);
@@ -1539,7 +1540,7 @@ if ((window.location.href.includes('/Quiz/') || window.location.href.includes('/
     && !window.vuQuizGenie) {
     window.vuQuizGenie = new VUQuizGenie();
 }
-
+})();
 // Initialize only if on a quiz question page (not finished)
 // if ((window.location.href.includes('/Quiz/') || window.location.href.includes('/FormativeAssessment/'))
 //     && !window.location.href.includes('QuizFinished.aspx')
